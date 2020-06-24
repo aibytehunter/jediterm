@@ -1,5 +1,8 @@
 package com.jediterm.pty;
 
+import com.alee.laf.NativeFonts;
+import com.alee.laf.WebLookAndFeel;
+import com.alee.skin.dark.WebDarkSkin;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jediterm.terminal.LoggingTtyConnector;
@@ -11,9 +14,13 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import javax.swing.*;
+import javax.swing.plaf.FontUIResource;
+import java.awt.*;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 
@@ -21,65 +28,94 @@ import java.util.Map;
  * @author traff
  */
 public class PtyMain extends AbstractTerminalFrame {
-  @Override
-  public TtyConnector createTtyConnector() {
-    try {
-      Map<String, String> envs = Maps.newHashMap(System.getenv());
-      String[] command;
-
-      if (UIUtil.isWindows) {
-        command = new String[]{"cmd.exe"};
-      } else {
-        command = new String[]{"/bin/bash", "--login"};
-        envs.put("TERM", "xterm");
-      }
-
-      PtyProcess process = PtyProcess.exec(command, envs, null);
-
-      return new LoggingPtyProcessTtyConnector(process, Charset.forName("UTF-8"));
-    } catch (Exception e) {
-      throw new IllegalStateException(e);
-    }
-  }
-
-  public static void main(final String[] arg) {
-    BasicConfigurator.configure();
-    Logger.getRootLogger().setLevel(Level.INFO);
-    new PtyMain();
-  }
-
-
-  public static class LoggingPtyProcessTtyConnector extends PtyProcessTtyConnector implements LoggingTtyConnector {
-    private List<char[]> myDataChunks = Lists.newArrayList();
-
-    public LoggingPtyProcessTtyConnector(PtyProcess process, Charset charset) {
-      super(process, charset);
-    }
-
     @Override
-    public int read(char[] buf, int offset, int length) throws IOException {
-      int len = super.read(buf, offset, length);
-      if (len > 0) {
-        char[] arr = Arrays.copyOfRange(buf, offset, len);
-        myDataChunks.add(arr);
-      }
-      return len;
+    public TtyConnector createTtyConnector() {
+        try {
+            Map<String, String> envs = Maps.newHashMap(System.getenv());
+            String[] command;
+
+            if (UIUtil.isWindows) {
+                command = new String[]{"powershell.exe"};
+            } else {
+                command = new String[]{"/bin/bash", "--login"};
+                envs.put("TERM", "xterm");
+            }
+
+            PtyProcess process = PtyProcess.exec(command, envs, null);
+
+            return new LoggingPtyProcessTtyConnector(process, Charset.forName("UTF-8"));
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 
-    public List<char[]> getChunks() {
-      return Lists.newArrayList(myDataChunks);
+    public static void main(final String[] arg) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+
+                // Install WebLaF as application LaF
+                WebLookAndFeel.install();
+                NativeFonts.setUseNativeFonts(true);
+                // You can also specify preferred skin right-away
+                WebLookAndFeel.install(WebDarkSkin.class);
+
+                // You can also do that in one of the old-fashioned ways
+                // UIManager.setLookAndFeel ( new WebLookAndFeel () );
+                // UIManager.setLookAndFeel ( "com.alee.laf.WebLookAndFeel" );
+                // UIManager.setLookAndFeel ( WebLookAndFeel.class.getCanonicalName () );
+
+                // You can also configure other WebLaF managers as you like now
+                // StyleManager
+                // SettingsManager
+                // LanguageManager
+                // ...
+
+                // Initialize your application once you're done setting everything up
+                // JFrame frame = ...
+
+                // You can also use Web* components to get access to some extended WebLaF features
+                // WebFrame frame = ...
+                BasicConfigurator.configure();
+                Logger.getRootLogger().setLevel(Level.TRACE);
+                new PtyMain();
+            }
+        });
+
     }
 
-    @Override
-    public void write(String string) throws IOException {
-      LOG.debug("Writing in OutputStream : " + string);
-      super.write(string);
-    }
 
-    @Override
-    public void write(byte[] bytes) throws IOException {
-      LOG.debug("Writing in OutputStream : " + Arrays.toString(bytes) + " " + new String(bytes));
-      super.write(bytes);
+    public static class LoggingPtyProcessTtyConnector extends PtyProcessTtyConnector implements LoggingTtyConnector {
+        private List<char[]> myDataChunks = Lists.newArrayList();
+
+        public LoggingPtyProcessTtyConnector(PtyProcess process, Charset charset) {
+            super(process, charset);
+        }
+
+        @Override
+        public int read(char[] buf, int offset, int length) throws IOException {
+            int len = super.read(buf, offset, length);
+            if (len > 0) {
+                char[] arr = Arrays.copyOfRange(buf, offset, len);
+                myDataChunks.add(arr);
+            }
+            return len;
+        }
+
+        public List<char[]> getChunks() {
+            return Lists.newArrayList(myDataChunks);
+        }
+
+        @Override
+        public void write(String string) throws IOException {
+            LOG.debug("Writing in OutputStream : " + string);
+            super.write(string);
+        }
+
+        @Override
+        public void write(byte[] bytes) throws IOException {
+            LOG.debug("Writing in OutputStream : " + Arrays.toString(bytes) + " " + new String(bytes));
+            super.write(bytes);
+        }
     }
-  }
 }

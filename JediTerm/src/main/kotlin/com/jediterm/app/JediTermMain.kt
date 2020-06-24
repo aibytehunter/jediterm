@@ -80,7 +80,6 @@ class JediTerm : AbstractTerminalFrame(), Disposable {
             val charset = Charset.forName("UTF-8")
 
             val envs = Maps.newHashMap(System.getenv())
-
             EncodingEnvironmentUtil.setLocaleEnvironmentIfMac(envs, charset)
 
             val command: Array<String>

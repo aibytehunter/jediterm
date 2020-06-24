@@ -64,7 +64,8 @@ public class StyledTextTest extends TestCase {
   }
 
   public void test24BitForegroundColourParsing() throws IOException {
-    TerminalTextBuffer terminalTextBuffer = getBufferFor(12, 1, CSI + "38;2;0;128;0mHello");
+    TerminalTextBuffer terminalTextBuffer = getBufferFor(12, 1, CSI + "38;2;0;128;0mHello 测试");
+    System.out.println(terminalTextBuffer.toString());
     TextStyle style = terminalTextBuffer.getStyleAt(0, 0);
     assertEquals(new TerminalColor(0, 128, 0), style.getForeground());
   }

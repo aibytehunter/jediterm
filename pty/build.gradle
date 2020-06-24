@@ -1,3 +1,13 @@
+buildscript {
+    repositories {
+        maven { url 'https://repo.spring.io/plugins-snapshot' }
+    }
+    dependencies {
+        classpath 'io.spring.gradle:dependency-management-plugin:1.0.7.BUILD-SNAPSHOT'
+    }
+}
+
+apply plugin: "io.spring.dependency-management"
 apply plugin: 'java'
 apply plugin: 'application'
 apply plugin: 'maven-publish'
@@ -7,19 +17,27 @@ apply plugin: 'com.jfrog.bintray'
 sourceSets.main.java.srcDirs = ['src']
 
 repositories {
+    maven {
+        url "https://repo1.maven.org/maven2"
+    }
     jcenter()
+    mavenCentral()
+    mavenLocal()
 }
 
+dependencyManagement {
+    dependencies {
+        dependency group: 'com.weblookandfeel', name: 'weblaf-ui', version: '1.2.13', ext: 'pom'
+    }
+}
 
 dependencies {
     compile project(':terminal')
-
     compile 'log4j:log4j:1.2.17'
     compile 'org.jetbrains:annotations:13.0'
     compile 'com.google.guava:guava:25.1-jre'
-
     compile 'org.jetbrains.pty4j:pty4j:0.8.5'
-
+    compile 'com.weblookandfeel:weblaf-ui'
     testCompile 'junit:junit:4.12'
 }
 

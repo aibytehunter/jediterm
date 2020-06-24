@@ -49,6 +49,7 @@ public abstract class AbstractTabbedTerminalWidget<T extends JediTermWidget> ext
     mySettingsProvider = settingsProvider;
     myCreateNewSessionAction = createNewSessionAction;
 
+
     setFocusTraversalPolicy(new DefaultFocusTraversalPolicy());
 
     myPanel = new JPanel(new BorderLayout());

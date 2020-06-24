@@ -456,6 +456,8 @@ public class TerminalTextBuffer {
 
     if (linesFromHistory < maximalLinesToProcess) {
       // we can show lines from screen buffer
+
+
       myScreenBuffer.processLines(0, maximalLinesToProcess - linesFromHistory, consumer, -linesFromHistory);
     }
   }

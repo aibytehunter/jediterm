@@ -138,8 +138,8 @@ public class SelectionTest extends TestCase {
 
     JediTerminal terminal = new JediTerminal(new BackBufferDisplay(terminalTextBuffer), terminalTextBuffer, state);
 
-    terminal.writeString("生活習慣病");
+    terminal.writeString("测试");
 
-    assertEquals("生活習慣病", SelectionUtil.getSelectionText(new Point(0, 0), new Point(10, 0), terminalTextBuffer));
+   assertEquals("测试", SelectionUtil.getSelectionText(new Point(0, 0), new Point(10, 0), terminalTextBuffer));
   }
 }
