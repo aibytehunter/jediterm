@@ -35,7 +35,7 @@ public class PtyMain extends AbstractTerminalFrame {
             String[] command;
 
             if (UIUtil.isWindows) {
-                command = new String[]{"powershell.exe"};
+                command = new String[]{"wsl.exe"};
             } else {
                 command = new String[]{"/bin/bash", "--login"};
                 envs.put("TERM", "xterm");
@@ -53,12 +53,12 @@ public class PtyMain extends AbstractTerminalFrame {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-
-                // Install WebLaF as application LaF
-                WebLookAndFeel.install();
+                System.setProperty("awt.useSystemAAFontSettings", "on");
+                System.setProperty("swing.aatext", "true");
+//                // Install WebLaF as application LaF
                 NativeFonts.setUseNativeFonts(true);
-                // You can also specify preferred skin right-away
-                WebLookAndFeel.install(WebDarkSkin.class);
+//                // You can also specify preferred skin right-away
+//                WebLookAndFeel.install(WebDarkSkin.class);
 
                 // You can also do that in one of the old-fashioned ways
                 // UIManager.setLookAndFeel ( new WebLookAndFeel () );

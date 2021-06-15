@@ -632,7 +632,7 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
         graphics.setFont(myNormalFont);
         graphics.setRenderingHint(
                 RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         final float lineSpace = mySettingsProvider.getLineSpace();
         final FontMetrics fo = graphics.getFontMetrics();
@@ -1055,7 +1055,8 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
             CharBuffer buf = new CharBuffer(c);
             int xCoord = x * myCharSize.width + getInsetX();
             int yCoord = y * myCharSize.height;
-            int textLength = CharUtils.getTextLengthDoubleWidthAware(buf.getBuf(), buf.getStart(), buf.length(), mySettingsProvider.ambiguousCharsAreDoubleWidth());
+            int textLength = CharUtils.getTextLengthDoubleWidthAware(buf.getBuf(), buf.getStart(), buf.length(),
+                    mySettingsProvider.ambiguousCharsAreDoubleWidth());
             int height = Math.min(myCharSize.height, getHeight() - yCoord);
             int width = Math.min(textLength * TerminalPanel.this.myCharSize.width, TerminalPanel.this.getWidth() - xCoord);
             int lineStrokeSize = 2;
@@ -1198,7 +1199,8 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
 //        blockLen++;
 //      }
 
-            if (offset + 2 <= buf.length() && Character.isSurrogatePair(renderingBuffer.getBuf()[buf.getStart() + offset], renderingBuffer.getBuf()[buf.getStart() + offset + 1])) {
+            if (offset + 2 <= buf.length() && Character.isSurrogatePair(renderingBuffer.getBuf()[buf.getStart() + offset],
+                    renderingBuffer.getBuf()[buf.getStart() + offset + 1])) {
                 blockLen = 2;
             }
 

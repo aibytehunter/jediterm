@@ -139,7 +139,7 @@ public abstract class AbstractTerminalFrame {
         myTerminal = createTabbedTerminalWidget();
 
         final JFrame frame = new JFrame("SSH连接");
-        frame.getRootPane ().putClientProperty ( "styleId", "frame-decorated" );
+        frame.getRootPane().putClientProperty("styleId", "frame-decorated");
         frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(final WindowEvent e) {
@@ -151,7 +151,7 @@ public abstract class AbstractTerminalFrame {
         frame.setJMenuBar(mb);
         sizeFrameForTerm(frame);
         frame.getContentPane().add("Center", myTerminal.getComponent());
-        frame.setOpacity(0.85f);
+        //frame.setOpacity(0.85f);
         frame.pack();
         frame.setLocationByPlatform(true);
         frame.setVisible(true);

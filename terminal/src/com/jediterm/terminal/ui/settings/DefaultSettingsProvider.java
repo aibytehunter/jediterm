@@ -13,6 +13,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Collections;
 
 public class DefaultSettingsProvider implements SettingsProvider {
@@ -115,14 +118,43 @@ public class DefaultSettingsProvider implements SettingsProvider {
         String fontName;
         if (UIUtil.isWindows) {
             //TODO 测试字体
+            fontName = "Consolas";
+            fontName = "simsun";
             fontName = "Monospaced";
+            fontName = "YaHeiConsola";
             //fontName = "Cascadia Code";
         } else if (UIUtil.isMac) {
             fontName = "Menlo";
         } else {
             fontName = "Monospaced";
         }
-        return new Font(fontName, Font.PLAIN, (int) getTerminalFontSize());
+
+
+//        return new Font(, Font.PLAIN, (int) getTerminalFontSize());
+        return getSelfDefinedFont(null);
+    }
+
+    private static Font localFont;
+
+    static {
+        try {
+            localFont = Font.createFont(Font.TRUETYPE_FONT, new File("D://YaHeiConsolasHybrid.ttf"));
+        } catch (FontFormatException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    //filepath字体文件的路径
+    private static java.awt.Font getSelfDefinedFont(String filepath) {
+        try {
+            localFont = localFont.deriveFont(java.awt.Font.PLAIN, 16);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+        return localFont;
     }
 
     @Override
