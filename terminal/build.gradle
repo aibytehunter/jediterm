@@ -18,7 +18,7 @@ sourceSets {
 
 //编译groovy代码时采用 UTF-8
 tasks.withType(GroovyCompile) {
-    groovyOptions.encoding = "MacRoman"
+    groovyOptions.encoding = "UTF-8"
 }
 
 //编译JAVA文件时采用UTF-8
@@ -34,10 +34,11 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 
+
 compileJava {
     sourceCompatibility = '1.8'
     targetCompatibility = '1.8'
-    options.encoding = "UTF-8"
+    options.encoding =  "UTF-8"
     options.debugOptions.debugLevel = 'lines,vars,source'
 }
 

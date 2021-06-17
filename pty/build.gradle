@@ -1,43 +1,25 @@
-buildscript {
-    repositories {
-        maven { url 'https://repo.spring.io/plugins-snapshot' }
-    }
-    dependencies {
-        classpath 'io.spring.gradle:dependency-management-plugin:1.0.7.BUILD-SNAPSHOT'
-    }
-}
-
-apply plugin: "io.spring.dependency-management"
 apply plugin: 'java'
 apply plugin: 'application'
 apply plugin: 'maven-publish'
-apply plugin: 'com.jfrog.bintray'
 
 
 sourceSets.main.java.srcDirs = ['src']
 
 repositories {
     maven {
-        url "https://repo1.maven.org/maven2"
-    }
-    jcenter()
-    mavenCentral()
-    mavenLocal()
-}
-
-dependencyManagement {
-    dependencies {
-        dependency group: 'com.weblookandfeel', name: 'weblaf-ui', version: '1.2.13', ext: 'pom'
+        url "https://packages.jetbrains.team/maven/p/ij/intellij-dependencies"
     }
 }
 
 dependencies {
     compile project(':terminal')
+
     compile 'log4j:log4j:1.2.17'
     compile 'org.jetbrains:annotations:13.0'
     compile 'com.google.guava:guava:25.1-jre'
-    compile 'org.jetbrains.pty4j:pty4j:0.8.5'
-    compile 'com.weblookandfeel:weblaf-ui'
+
+    compile 'org.jetbrains.pty4j:pty4j:0.11.3'
+
     testCompile 'junit:junit:4.12'
 }
 
@@ -86,59 +68,43 @@ artifacts {
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            groupId group
-            artifactId archivesBaseName
+            groupId = group
+            artifactId = archivesBaseName
             artifact mainJar
             artifact sourcesJar
-            pom.withXml {
-                asNode().children().last() + {
-                    resolveStrategy = DELEGATE_FIRST
-                    name 'JediTerm'
-                    description 'Pure Java Terminal Emulator. Works with SSH and PTY.'
-                    url 'https://github.com/JetBrains/jediterm'
-                    scm {
-                        connection 'scm:git:git://github.com/JetBrains/jediterm.git'
-                        developerConnection 'scm:git:ssh:github.com/JetBrains/jediterm.git'
-                        url 'https://github.com/JetBrains/jediterm'
+            pom {
+                name = 'JediTerm'
+                description 'Pure Java Terminal Emulator. Works with SSH and PTY.'
+                url = 'https://github.com/JetBrains/jediterm'
+                licenses {
+                    license {
+                        name = 'LGPL 3.0'
+                        url = 'https://www.gnu.org/licenses/lgpl.txt'
                     }
-                    licenses {
-                        license {
-                            name 'LGPL 3.0'
-                            url 'https://www.gnu.org/licenses/lgpl.txt'
-                        }
+                }
+                developers {
+                    developer {
+                        id = 'JetBrains'
+                        name = 'JetBrains Team'
+                        organization = 'JetBrains'
+                        organizationUrl = 'https://www.jetbrains.com'
+                        email = 'sergey.simonchik@jetbrains.com'
                     }
-                    developers {
-                        developer {
-                            id 'JetBrains'
-                            name 'JetBrains Team'
-                            organization 'JetBrains'
-                            organizationUrl 'https://www.jetbrains.com'
-                            email 'dmitry.trofimov@jetbrains.com'
-                        }
-                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/JetBrains/jediterm.git'
+                    developerConnection = 'scm:git:ssh:github.com/JetBrains/jediterm.git'
+                    url = 'https://github.com/JetBrains/jediterm'
                 }
             }
         }
     }
-}
-
-if (System.getenv('BINTRAY_USER') != null) {
-    bintray {
-        user = System.getenv('BINTRAY_USER')
-        key = System.getenv('BINTRAY_KEY')
-        publish = true
-        publications = ['mavenJava']
-
-
-        pkg {
-            repo = 'jediterm'
-            name = 'org.jetbrains.jediterm:jediterm-pty'
-            userOrg = 'jetbrains'
-            licenses = ['LGPL-3.0']
-            vcsUrl = 'https://github.com/JetBrains/jediterm.git'
-
-            version {
-                name = rootProject.ext.projectVersion
+    repositories {
+        maven {
+            url "https://packages.jetbrains.team/maven/p/ij/intellij-dependencies"
+            credentials {
+                username = System.getenv('INTELLIJ_DEPENDENCIES_BOT')
+                password = System.getenv('INTELLIJ_DEPENDENCIES_TOKEN')
             }
         }
     }

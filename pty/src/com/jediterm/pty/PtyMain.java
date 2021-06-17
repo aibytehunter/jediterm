@@ -1,8 +1,5 @@
 package com.jediterm.pty;
 
-import com.alee.laf.NativeFonts;
-import com.alee.laf.WebLookAndFeel;
-import com.alee.skin.dark.WebDarkSkin;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jediterm.terminal.LoggingTtyConnector;
@@ -15,12 +12,9 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import javax.swing.*;
-import javax.swing.plaf.FontUIResource;
-import java.awt.*;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 
@@ -55,8 +49,6 @@ public class PtyMain extends AbstractTerminalFrame {
             public void run() {
                 System.setProperty("awt.useSystemAAFontSettings", "on");
                 System.setProperty("swing.aatext", "true");
-//                // Install WebLaF as application LaF
-                NativeFonts.setUseNativeFonts(true);
 //                // You can also specify preferred skin right-away
 //                WebLookAndFeel.install(WebDarkSkin.class);
 
@@ -77,7 +69,7 @@ public class PtyMain extends AbstractTerminalFrame {
                 // You can also use Web* components to get access to some extended WebLaF features
                 // WebFrame frame = ...
                 BasicConfigurator.configure();
-                Logger.getRootLogger().setLevel(Level.TRACE);
+                Logger.getRootLogger().setLevel(Level.INFO);
                 new PtyMain();
             }
         });

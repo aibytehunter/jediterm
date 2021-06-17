@@ -49,7 +49,6 @@ public abstract class AbstractTabbedTerminalWidget<T extends JediTermWidget> ext
     mySettingsProvider = settingsProvider;
     myCreateNewSessionAction = createNewSessionAction;
 
-
     setFocusTraversalPolicy(new DefaultFocusTraversalPolicy());
 
     myPanel = new JPanel(new BorderLayout());
@@ -93,7 +92,7 @@ public abstract class AbstractTabbedTerminalWidget<T extends JediTermWidget> ext
       setSize(size);
 
       if (myTerminalPanelListener != null) {
-        myTerminalPanelListener.onPanelResize(size, RequestOrigin.User);
+        myTerminalPanelListener.onPanelResize(RequestOrigin.User);
       }
 
       onSessionChanged();

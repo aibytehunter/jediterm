@@ -8,8 +8,11 @@ import org.jetbrains.annotations.NotNull;
 import java.awt.*;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
 
 /**
@@ -23,19 +26,16 @@ public class TerminalStarter implements TerminalOutputStream {
   private final Emulator myEmulator;
 
   private final Terminal myTerminal;
-  private final TerminalDataStream myDataStream;
 
   private final TtyConnector myTtyConnector;
 
-  private final ExecutorService myEmulatorExecutor = Executors.newSingleThreadExecutor();
+  private final ScheduledExecutorService myEmulatorExecutor = Executors.newSingleThreadScheduledExecutor();
 
   public TerminalStarter(final Terminal terminal, final TtyConnector ttyConnector, TerminalDataStream dataStream) {
     myTtyConnector = ttyConnector;
-    //can be implemented - just recreate channel and that's it
-    myDataStream = dataStream;
     myTerminal = terminal;
     myTerminal.setTerminalOutput(this);
-    myEmulator = createEmulator(myDataStream, terminal);
+    myEmulator = createEmulator(dataStream, terminal);
   }
 
   protected JediEmulator createEmulator(TerminalDataStream dataStream, Terminal terminal) {
@@ -70,21 +70,26 @@ public class TerminalStarter implements TerminalOutputStream {
     return myTerminal.getCodeForKey(key, modifiers);
   }
 
-  public void postResize(final Dimension dimension, final RequestOrigin origin) {
-    execute(() -> resizeTerminal(myTerminal, myTtyConnector, dimension, origin));
+  public void postResize(@NotNull Dimension dimension, @NotNull RequestOrigin origin) {
+    execute(() -> {
+      resize(myEmulator, myTerminal, myTtyConnector, dimension, origin, (millisDelay, runnable) -> {
+        myEmulatorExecutor.schedule(runnable, millisDelay, TimeUnit.MILLISECONDS);
+      });
+    });
   }
 
   /**
    * Resizes terminal and tty connector, should be called on a pooled thread.
    */
-  public static void resizeTerminal(@NotNull Terminal terminal, @NotNull TtyConnector ttyConnector,
-                                    @NotNull Dimension terminalDimension, @NotNull RequestOrigin origin) {
-    Dimension pixelSize;
-    //noinspection SynchronizationOnLocalVariableOrMethodParameter
-    synchronized (terminal) {
-      pixelSize = terminal.resize(terminalDimension, origin);
-    }
-    ttyConnector.resize(terminalDimension, pixelSize);
+  public static void resize(@NotNull Emulator emulator,
+                            @NotNull Terminal terminal,
+                            @NotNull TtyConnector ttyConnector,
+                            @NotNull Dimension newTermSize,
+                            @NotNull RequestOrigin origin,
+                            @NotNull BiConsumer<Long, Runnable> taskScheduler) {
+    CompletableFuture<?> promptUpdated = ((JediEmulator)emulator).getPromptUpdatedAfterResizeFuture(taskScheduler);
+    terminal.resize(newTermSize, origin, promptUpdated);
+    ttyConnector.resize(newTermSize);
   }
 
   @Override

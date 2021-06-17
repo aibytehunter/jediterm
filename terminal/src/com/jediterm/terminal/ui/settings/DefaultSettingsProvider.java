@@ -4,6 +4,7 @@ import com.jediterm.terminal.HyperlinkStyle;
 import com.jediterm.terminal.TerminalColor;
 import com.jediterm.terminal.TextStyle;
 import com.jediterm.terminal.emulator.ColorPalette;
+import com.jediterm.terminal.emulator.ColorPaletteImpl;
 import com.jediterm.terminal.model.LinesBuffer;
 import com.jediterm.terminal.ui.TerminalActionPresentation;
 import com.jediterm.terminal.ui.UIUtil;
@@ -14,28 +15,37 @@ import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collections;
 
 public class DefaultSettingsProvider implements SettingsProvider {
+    public static Font localFont;
+
+    static {
+        try {
+            localFont = Font.createFont(Font.TRUETYPE_FONT, new File("D://YaHeiConsolasHybrid.ttf"));
+            localFont = localFont.deriveFont(java.awt.Font.PLAIN, 16);
+        } catch (FontFormatException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     @Override
-    public @NotNull
-    TerminalActionPresentation getNewSessionActionPresentation() {
+    public @NotNull TerminalActionPresentation getNewSessionActionPresentation() {
         return new TerminalActionPresentation("New Session", UIUtil.isMac
                 ? KeyStroke.getKeyStroke(KeyEvent.VK_T, InputEvent.META_DOWN_MASK)
                 : KeyStroke.getKeyStroke(KeyEvent.VK_T, InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK));
     }
 
     @Override
-    public @NotNull
-    TerminalActionPresentation getOpenUrlActionPresentation() {
+    public @NotNull TerminalActionPresentation getOpenUrlActionPresentation() {
         return new TerminalActionPresentation("Open as URL", Collections.emptyList());
     }
 
     @Override
-    public @NotNull
-    TerminalActionPresentation getCopyActionPresentation() {
+    public @NotNull TerminalActionPresentation getCopyActionPresentation() {
         KeyStroke keyStroke = UIUtil.isMac
                 ? KeyStroke.getKeyStroke(KeyEvent.VK_C, InputEvent.META_DOWN_MASK)
                 // CTRL + C is used for signal; use CTRL + SHIFT + C instead
@@ -44,8 +54,7 @@ public class DefaultSettingsProvider implements SettingsProvider {
     }
 
     @Override
-    public @NotNull
-    TerminalActionPresentation getPasteActionPresentation() {
+    public @NotNull TerminalActionPresentation getPasteActionPresentation() {
         KeyStroke keyStroke = UIUtil.isMac
                 ? KeyStroke.getKeyStroke(KeyEvent.VK_V, InputEvent.META_DOWN_MASK)
                 // CTRL + V is used for signal; use CTRL + SHIFT + V instead
@@ -54,117 +63,85 @@ public class DefaultSettingsProvider implements SettingsProvider {
     }
 
     @Override
-    public @NotNull
-    TerminalActionPresentation getClearBufferActionPresentation() {
+    public @NotNull TerminalActionPresentation getClearBufferActionPresentation() {
         return new TerminalActionPresentation("Clear Buffer", UIUtil.isMac
                 ? KeyStroke.getKeyStroke(KeyEvent.VK_K, InputEvent.META_DOWN_MASK)
                 : KeyStroke.getKeyStroke(KeyEvent.VK_L, InputEvent.CTRL_DOWN_MASK));
     }
 
     @Override
-    public @NotNull
-    TerminalActionPresentation getPageUpActionPresentation() {
+    public @NotNull TerminalActionPresentation getPageUpActionPresentation() {
         return new TerminalActionPresentation("Page Up",
                 KeyStroke.getKeyStroke(KeyEvent.VK_PAGE_UP, InputEvent.SHIFT_DOWN_MASK));
     }
 
     @Override
-    public @NotNull
-    TerminalActionPresentation getPageDownActionPresentation() {
+    public @NotNull TerminalActionPresentation getPageDownActionPresentation() {
         return new TerminalActionPresentation("Page Down",
                 KeyStroke.getKeyStroke(KeyEvent.VK_PAGE_DOWN, InputEvent.SHIFT_DOWN_MASK));
     }
 
     @Override
-    public @NotNull
-    TerminalActionPresentation getLineUpActionPresentation() {
+    public @NotNull TerminalActionPresentation getLineUpActionPresentation() {
         return new TerminalActionPresentation("Line Up", UIUtil.isMac
                 ? KeyStroke.getKeyStroke(KeyEvent.VK_UP, InputEvent.META_DOWN_MASK)
                 : KeyStroke.getKeyStroke(KeyEvent.VK_UP, InputEvent.CTRL_DOWN_MASK));
     }
 
     @Override
-    public @NotNull
-    TerminalActionPresentation getLineDownActionPresentation() {
+    public @NotNull TerminalActionPresentation getLineDownActionPresentation() {
         return new TerminalActionPresentation("Line Down", UIUtil.isMac
                 ? KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, InputEvent.META_DOWN_MASK)
                 : KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, InputEvent.CTRL_DOWN_MASK));
     }
 
     @Override
-    public @NotNull
-    TerminalActionPresentation getCloseSessionActionPresentation() {
+    public @NotNull TerminalActionPresentation getCloseSessionActionPresentation() {
         return new TerminalActionPresentation("Close Session", UIUtil.isMac
                 ? KeyStroke.getKeyStroke(KeyEvent.VK_W, InputEvent.META_DOWN_MASK)
                 : KeyStroke.getKeyStroke(KeyEvent.VK_W, InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK));
     }
 
     @Override
-    public @NotNull
-    TerminalActionPresentation getFindActionPresentation() {
+    public @NotNull TerminalActionPresentation getFindActionPresentation() {
         return new TerminalActionPresentation("Find", UIUtil.isMac
                 ? KeyStroke.getKeyStroke(KeyEvent.VK_F, InputEvent.META_DOWN_MASK)
                 : KeyStroke.getKeyStroke(KeyEvent.VK_F, InputEvent.CTRL_DOWN_MASK));
     }
 
     @Override
+    public @NotNull TerminalActionPresentation getSelectAllActionPresentation() {
+        return new TerminalActionPresentation("Select All", Collections.emptyList());
+    }
+
+    @Override
     public ColorPalette getTerminalColorPalette() {
-        //WINDOWS_PALETTE
-        return UIUtil.isWindows ? ColorPalette.XTERM_PALETTE : ColorPalette.XTERM_PALETTE;
+        return ColorPaletteImpl.XTERM_PALETTE;
     }
 
     @Override
     public Font getTerminalFont() {
         String fontName;
         if (UIUtil.isWindows) {
-            //TODO 测试字体
             fontName = "Consolas";
-            fontName = "simsun";
-            fontName = "Monospaced";
-            fontName = "YaHeiConsola";
-            //fontName = "Cascadia Code";
+            return localFont;
         } else if (UIUtil.isMac) {
             fontName = "Menlo";
         } else {
             fontName = "Monospaced";
         }
-
-
-//        return new Font(, Font.PLAIN, (int) getTerminalFontSize());
-        return getSelfDefinedFont(null);
-    }
-
-    private static Font localFont;
-
-    static {
-        try {
-            localFont = Font.createFont(Font.TRUETYPE_FONT, new File("D://YaHeiConsolasHybrid.ttf"));
-        } catch (FontFormatException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    //filepath字体文件的路径
-    private static java.awt.Font getSelfDefinedFont(String filepath) {
-        try {
-            localFont = localFont.deriveFont(java.awt.Font.PLAIN, 16);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-        return localFont;
+        return new Font(fontName, Font.PLAIN, (int) getTerminalFontSize());
     }
 
     @Override
     public float getTerminalFontSize() {
-        return 16F;
+        return 14;
     }
 
+
     @Override
-    public float getLineSpace() {
-        return 0;
+    public float getLineSpacing() {
+        return SettingsProvider.super.getLineSpacing();
     }
 
     @Override
@@ -210,7 +187,7 @@ public class DefaultSettingsProvider implements SettingsProvider {
 
     @Override
     public boolean emulateX11CopyPaste() {
-        return false;
+        return true;
     }
 
     @Override
@@ -260,7 +237,7 @@ public class DefaultSettingsProvider implements SettingsProvider {
 
     @Override
     public boolean altSendsEscape() {
-        return false;
+        return true;
     }
 
     @Override

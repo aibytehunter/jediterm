@@ -10,6 +10,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 import java.io.IOException;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.BiConsumer;
 
 /**
  * The main terminal emulator class.
@@ -26,11 +30,7 @@ public class JediEmulator extends DataStreamIteratingEmulator {
   private static int logThrottlerCounter = 0;
   private static int logThrottlerRatio = 100;
   private static int logThrottlerLimit = logThrottlerRatio;
-
-  @Deprecated
-  public JediEmulator(TerminalDataStream dataStream, TerminalOutputStream outputStream, Terminal terminal) {
-    super(dataStream, terminal);
-  }
+  private final BlockingQueue<CompletableFuture<Void>> myResizeFutureQueue = new LinkedBlockingQueue<>();
 
   public JediEmulator(TerminalDataStream dataStream, Terminal terminal) {
     super(dataStream, terminal);
@@ -89,6 +89,9 @@ public class JediEmulator extends DataStreamIteratingEmulator {
           terminal.writeCharacters(nonControlCharacters);
         }
         break;
+    }
+    if (myDataStream.isEmpty()) {
+      completeResize();
     }
   }
 
@@ -930,7 +933,7 @@ public class JediEmulator extends DataStreamIteratingEmulator {
         case 96:
         case 97:
           //Bright versions of the ISO colors for foreground
-          builder.setForeground(ColorPalette.getIndexedColor(arg - 82));
+          builder.setForeground(ColorPalette.getIndexedTerminalColor(arg - 82));
           break;
         case 100:
         case 101:
@@ -941,7 +944,7 @@ public class JediEmulator extends DataStreamIteratingEmulator {
         case 106:
         case 107:
           //Bright versions of the ISO colors for background
-          builder.setBackground(ColorPalette.getIndexedColor(arg - 92));
+          builder.setBackground(ColorPalette.getIndexedTerminalColor(arg - 92));
           break;
         default:
           LOG.error("Unknown character attribute:" + arg);
@@ -969,7 +972,7 @@ public class JediEmulator extends DataStreamIteratingEmulator {
       }
     } else if (code == 5) {
       /* indexed color */
-      return ColorPalette.getIndexedColor(args.getArg(index + 2, 0));
+      return ColorPalette.getIndexedTerminalColor(args.getArg(index + 2, 0));
     } else {
       LOG.error("Unsupported code for color attribute " + args.toString());
       return null;
@@ -1003,5 +1006,18 @@ public class JediEmulator extends DataStreamIteratingEmulator {
   public void setMouseMode(MouseMode mouseMode) {
     myTerminal.setMouseMode(mouseMode);
   }
-}
 
+  public @NotNull CompletableFuture<?> getPromptUpdatedAfterResizeFuture(@NotNull BiConsumer<Long, Runnable> taskScheduler) {
+    CompletableFuture<Void> resizeFuture = new CompletableFuture<>();
+    taskScheduler.accept(100L, this::completeResize);
+    myResizeFutureQueue.add(resizeFuture);
+    return resizeFuture;
+  }
+
+  private void completeResize() {
+    CompletableFuture<Void> resizeFuture;
+    while ((resizeFuture = myResizeFutureQueue.poll()) != null) {
+      resizeFuture.complete(null);
+    }
+  }
+}

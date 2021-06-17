@@ -35,4 +35,9 @@ public class FileLoadableTerminalDataStream implements TerminalDataStream {
   public void pushBackBuffer(char[] bytes, int length) throws IOException {
     myDataStream.pushBackBuffer(bytes, length);
   }
+
+  @Override
+  public boolean isEmpty() {
+    return false;
+  }
 }

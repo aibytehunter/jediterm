@@ -15,7 +15,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -51,7 +53,7 @@ public class TerminalTextBuffer {
 
   private boolean myUsingAlternateBuffer = false;
 
-  private java.util.List<TerminalModelListener> myListeners = Lists.newArrayList();
+  private final List<TerminalModelListener> myListeners = new CopyOnWriteArrayList<>();
 
   @Nullable
   private final TextProcessing myTextProcessing;
@@ -87,18 +89,24 @@ public class TerminalTextBuffer {
 
   public Dimension resize(@NotNull final Dimension pendingResize,
                           @NotNull final RequestOrigin origin,
-                          int cursorY,
-                          @NotNull JediTerminal.ResizeHandler resizeHandler,
-                          @Nullable TerminalSelection selection) {
-    return resize(pendingResize, origin, 0, cursorY, resizeHandler, selection);
-  }
-
-  public Dimension resize(@NotNull final Dimension pendingResize,
-                          @NotNull final RequestOrigin origin,
                           final int cursorX,
                           final int cursorY,
                           @NotNull JediTerminal.ResizeHandler resizeHandler,
                           @Nullable TerminalSelection mySelection) {
+    lock();
+    try {
+      return doResize(pendingResize, origin, cursorX, cursorY, resizeHandler, mySelection);
+    } finally {
+      unlock();
+    }
+  }
+
+  private Dimension doResize(@NotNull final Dimension pendingResize,
+                             @NotNull final RequestOrigin origin,
+                             final int cursorX,
+                             final int cursorY,
+                             @NotNull JediTerminal.ResizeHandler resizeHandler,
+                             @Nullable TerminalSelection mySelection) {
     final int newWidth = pendingResize.width;
     final int newHeight = pendingResize.height;
     int newCursorX = cursorX;
@@ -456,8 +464,6 @@ public class TerminalTextBuffer {
 
     if (linesFromHistory < maximalLinesToProcess) {
       // we can show lines from screen buffer
-
-
       myScreenBuffer.processLines(0, maximalLinesToProcess - linesFromHistory, consumer, -linesFromHistory);
     }
   }
@@ -489,5 +495,9 @@ public class TerminalTextBuffer {
   @NotNull
   LinesBuffer getScreenBufferOrBackup() {
     return myUsingAlternateBuffer ? myScreenBufferBackup : myScreenBuffer;
+  }
+
+  public int findScreenLineIndex(@NotNull TerminalLine line) {
+    return myScreenBuffer.findLineIndex(line);
   }
 }

@@ -12,6 +12,7 @@ import com.jediterm.terminal.emulator.JediEmulator;
 import com.jediterm.util.BackBufferDisplay;
 import junit.framework.TestCase;
 import org.apache.log4j.BasicConfigurator;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 
@@ -64,8 +65,7 @@ public class StyledTextTest extends TestCase {
   }
 
   public void test24BitForegroundColourParsing() throws IOException {
-    TerminalTextBuffer terminalTextBuffer = getBufferFor(12, 1, CSI + "38;2;0;128;0mHello 测试");
-    System.out.println(terminalTextBuffer.toString());
+    TerminalTextBuffer terminalTextBuffer = getBufferFor(12, 1, CSI + "38;2;0;128;0mHello");
     TextStyle style = terminalTextBuffer.getStyleAt(0, 0);
     assertEquals(new TerminalColor(0, 128, 0), style.getForeground());
   }
@@ -104,23 +104,14 @@ public class StyledTextTest extends TestCase {
     assertTrue(style.hasOption(TextStyle.Option.BOLD));
   }
 
-  private TerminalTextBuffer getBufferFor(int width, int height, String content) throws IOException {
+  private @NotNull TerminalTextBuffer getBufferFor(int width, int height, String content) throws IOException {
     StyleState state = new StyleState();
     TerminalTextBuffer terminalTextBuffer = new TerminalTextBuffer(width, height, state);
     JediTerminal terminal = new JediTerminal(new BackBufferDisplay(terminalTextBuffer), terminalTextBuffer, state);
-    Emulator emulator = new JediEmulator(new ArrayTerminalDataStream(content.toCharArray()),
-                                         new DevNullTerminalOutputStream(), terminal);
+    Emulator emulator = new JediEmulator(new ArrayTerminalDataStream(content.toCharArray()), terminal);
     while (emulator.hasNext()) {
       emulator.next();
     }
     return terminalTextBuffer;
-  }
-
-  private static class DevNullTerminalOutputStream implements TerminalOutputStream {
-    @Override
-    public void sendBytes(byte[] response) {}
-
-    @Override
-    public void sendString(String string) {}
   }
 }
