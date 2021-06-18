@@ -1002,7 +1002,7 @@ public class SimpleColoredComponent extends JComponent implements Accessible, Co
     @Override
     public void paintBorder(final Component c, final Graphics g, final int x, final int y, final int width, final int height) {
       g.setColor(Color.BLACK);
-      com.intellij.util.ui.DrawUtil.drawDottedRectangle(g, x, y, x + width - 1, y + height - 1);
+      DrawUtil.drawDottedRectangle(g, x, y, x + width - 1, y + height - 1);
     }
 
     @Override

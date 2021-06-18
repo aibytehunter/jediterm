@@ -49,7 +49,7 @@ public abstract class RecursionGuard {
   public abstract <T> T doPreventingRecursion(@NotNull Object key, boolean memoize, @NotNull Computable<T> computation);
 
   /**
-   * Used in pair with {@link com.intellij.openapi.util.RecursionGuard.StackStamp#mayCacheNow()} to ensure that cached are only the reliable values,
+   * Used in pair with {@link StackStamp#mayCacheNow()} to ensure that cached are only the reliable values,
    * not depending on anything incomplete due to recursive prevention policies.
    * A typical usage is this:
    * <code>
@@ -75,7 +75,7 @@ public abstract class RecursionGuard {
   public abstract List<Object> currentStack();
 
   /**
-   * Makes {@link com.intellij.openapi.util.RecursionGuard.StackStamp#mayCacheNow()} return false for all stamps created since a computation with
+   * Makes {@link StackStamp#mayCacheNow()} return false for all stamps created since a computation with
    * key <code>since</code> began.
    *
    * Used to prevent caching of results that are non-reliable NOT due to recursion prevention: for example, too deep recursion
@@ -93,7 +93,7 @@ public abstract class RecursionGuard {
      * @return whether a computation that started at the moment of this {@link StackStamp} instance creation does not depend on any re-entrant recursive
      * results. When such non-reliable results exist in the thread's call stack, returns false, otherwise true.
      * If you use this with {@link RecursionGuard#doPreventingRecursion(Object, Computable)}, then the
-     * {@link com.intellij.openapi.util.RecursionGuard#markStack()}+{@link #mayCacheNow()} should be outside of recursion prevention call. Otherwise
+     * {@link RecursionGuard#markStack()}+{@link #mayCacheNow()} should be outside of recursion prevention call. Otherwise
      * even the outer recursive computation result won't be cached.
      *
      */

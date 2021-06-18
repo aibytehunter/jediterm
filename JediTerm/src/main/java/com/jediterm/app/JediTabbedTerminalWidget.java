@@ -286,7 +286,7 @@ public class JediTabbedTerminalWidget extends AbstractTabbedTerminalWidget<JediT
               }
             };
             if (myTabs.useSmallLabels()) {
-              textField.setFont(com.intellij.util.ui.UIUtil.getFont(UIUtil.FontSize.SMALL, textField.getFont()));
+              textField.setFont(UIUtil.getFont(UIUtil.FontSize.SMALL, textField.getFont()));
             }
             textField.setOpaque(true);
             return textField;

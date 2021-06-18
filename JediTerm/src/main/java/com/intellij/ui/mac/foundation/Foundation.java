@@ -215,7 +215,7 @@ public class Foundation {
     myFoundationLibrary.CFRetain(id);
   }
   
-  public static ID cgWindowListCreateImage(Foundation.NSRect screenBounds, int windowOption, ID windowID, int imageOption) {
+  public static ID cgWindowListCreateImage(NSRect screenBounds, int windowOption, ID windowID, int imageOption) {
     return myFoundationLibrary.CGWindowListCreateImage(screenBounds, windowOption, windowID, imageOption);
   }
 
