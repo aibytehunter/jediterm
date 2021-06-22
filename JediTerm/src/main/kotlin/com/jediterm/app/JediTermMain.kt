@@ -85,11 +85,11 @@ class JediTerm : AbstractTerminalFrame(), Disposable {
             val command: Array<String>
 
             if (UIUtil.isWindows) {
-                command = arrayOf("cmd.exe")
+                command = arrayOf("wsl.exe")
             } else {
                 command = arrayOf("/bin/bash", "--login")
-                envs.put("TERM", "xterm")
             }
+            envs.put("TERM", "xterm")
 
             val process = PtyProcess.exec(command, envs, null)
 

@@ -1131,7 +1131,7 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
                 if (doubleWidthCharacter) {
                     j++;
                     //TODO 此处控制输出字符
-                    buf[j] = '\r';
+                    buf[j] = CharUtils.FILL_CHAR;
                 }
                 j++;
             }

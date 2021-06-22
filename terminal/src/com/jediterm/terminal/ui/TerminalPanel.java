@@ -580,7 +580,7 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
             }
             text = text.replace('\n', '\r');
 
-            text = text.replace("\r", "");
+            text = text.replace(String.valueOf(CharUtils.FILL_CHAR), "");
 
             myTerminalStarter.sendString(text);
         } catch (RuntimeException e) {
@@ -788,7 +788,12 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
                         Pair<Integer, Integer> interval = mySelection.intersect(nulIndex, row + myClientScrollOrigin, columnCount - nulIndex);
                         if (interval != null) {
                             TextStyle selectionStyle = getSelectionStyle(style);
-                            drawCharacters(x, row, selectionStyle, characters, gfx);
+                            CharBuffer selectionChars = characters.subBuffer(interval.first - x, interval.second);
+                            drawCharacters(interval.first, row, selectionStyle, selectionChars, gfx);
+
+                            //TODO 选中空白内容禁止选中整行
+//                            TextStyle selectionStyle = getSelectionStyle(style);
+//                            drawCharacters(x, row, selectionStyle, characters, gfx);
                             return;
                         }
                     }
@@ -1157,6 +1162,7 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
         drawCharacters(x, y, style, buf, gfx, true);
     }
 
+    //TODO 此处select调整选中内容
     private void drawCharacters(int x, int y, TextStyle style, CharBuffer buf, Graphics2D gfx,
                                 boolean includeSpaceBetweenLines) {
         int xCoord = x * myCharSize.width + getInsetX();

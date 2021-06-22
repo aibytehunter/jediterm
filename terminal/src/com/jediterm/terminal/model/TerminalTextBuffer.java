@@ -53,6 +53,7 @@ public class TerminalTextBuffer {
 
     private boolean myUsingAlternateBuffer = false;
 
+
     private final List<TerminalModelListener> myListeners = new CopyOnWriteArrayList<>();
 
     @Nullable
@@ -94,8 +95,8 @@ public class TerminalTextBuffer {
                             final int cursorY,
                             @NotNull JediTerminal.ResizeHandler resizeHandler,
                             @Nullable TerminalSelection mySelection) {
-        lock();
         try {
+            lock();
             return doResize(pendingResize, origin, cursorX, cursorY, resizeHandler, mySelection);
         } finally {
             unlock();
@@ -290,9 +291,10 @@ public class TerminalTextBuffer {
         if (index >= 0) {
             if (index >= getHeight()) {
                 LOG.error("Attempt to get line out of bounds: " + index + " >= " + getHeight());
-                TerminalLine.createEmpty();
                 //TODO 调整问题
-                return myScreenBuffer.getLine(myHistoryBuffer.getLineCount() - 1);
+//                return myScreenBuffer.getLine(myHistoryBuffer.getLineCount() - 1);
+
+                return TerminalLine.createEmpty();
             }
             return myScreenBuffer.getLine(index);
         } else {
@@ -321,10 +323,15 @@ public class TerminalTextBuffer {
                 sb.append(line);
                 sb.append('\n');
             }
+//            return sb.toString().replace(String.valueOf(CharUtils.FILL_CHAR), "");
             return sb.toString();
         } finally {
             myLock.unlock();
         }
+    }
+
+    public String getScreenSimpleLines() {
+        return getScreenLines().replace(String.valueOf(CharUtils.FILL_CHAR), "");
     }
 
     public void processScreenLines(final int yStart, final int yCount, @NotNull final StyledTextConsumer consumer) {
