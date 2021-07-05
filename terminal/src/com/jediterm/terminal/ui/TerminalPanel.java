@@ -312,14 +312,10 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
             }
         });
 
-        myBoundedRangeModel.addChangeListener(new
-
-                                                      ChangeListener() {
-                                                          public void stateChanged(final ChangeEvent e) {
-                                                              myClientScrollOrigin = myBoundedRangeModel.getValue();
-                                                              repaint();
-                                                          }
-                                                      });
+        myBoundedRangeModel.addChangeListener(e -> {
+            myClientScrollOrigin = myBoundedRangeModel.getValue();
+            repaint();
+        });
 
         createRepaintTimer();
     }
@@ -557,7 +553,7 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
             return;
         }
         String selectionText = SelectionUtil.getSelectionText(selectionStart, selectionEnd, myTerminalTextBuffer);
-        if (selectionText.length() != 0) {
+        if (selectionText.trim().length() != 0) {
             myCopyPasteHandler.setContents(selectionText, useSystemSelectionClipboardIfAvailable);
         }
     }
@@ -566,6 +562,9 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
         String text = myCopyPasteHandler.getContents(useSystemSelectionClipboardIfAvailable);
 
         if (text == null) {
+            return;
+        }
+        if (text.isEmpty() || text.trim().isEmpty()) {
             return;
         }
 

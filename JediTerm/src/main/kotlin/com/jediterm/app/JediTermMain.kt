@@ -89,7 +89,8 @@ class JediTerm : AbstractTerminalFrame(), Disposable {
             } else {
                 command = arrayOf("/bin/bash", "--login")
             }
-            envs.put("TERM", "xterm")
+            envs["TERM"] = "xterm-256color";
+//            envs.put("TERM", "xterm")
 
             val process = PtyProcess.exec(command, envs, null)
 
