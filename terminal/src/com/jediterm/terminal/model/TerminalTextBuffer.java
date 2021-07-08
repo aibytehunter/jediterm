@@ -95,14 +95,25 @@ public class TerminalTextBuffer {
                             final int cursorY,
                             @NotNull JediTerminal.ResizeHandler resizeHandler,
                             @Nullable TerminalSelection mySelection) {
+        lock();
         try {
-            lock();
             return doResize(pendingResize, origin, cursorX, cursorY, resizeHandler, mySelection);
         } finally {
             unlock();
         }
     }
 
+    /**
+     * 尺寸调整
+     *
+     * @param pendingResize
+     * @param origin
+     * @param cursorX
+     * @param cursorY
+     * @param resizeHandler
+     * @param mySelection
+     * @return
+     */
     private Dimension doResize(@NotNull final Dimension pendingResize,
                                @NotNull final RequestOrigin origin,
                                final int cursorX,
@@ -291,11 +302,10 @@ public class TerminalTextBuffer {
         if (index >= 0) {
             if (index >= getHeight()) {
                 LOG.error("Attempt to get line out of bounds: " + index + " >= " + getHeight());
-                //TODO 调整问题
-//                return myScreenBuffer.getLine(myHistoryBuffer.getLineCount() - 1);
-
+                //TODO 高度问题
                 return TerminalLine.createEmpty();
             }
+
             return myScreenBuffer.getLine(index);
         } else {
             if (index < -getHistoryLinesCount()) {
@@ -323,7 +333,6 @@ public class TerminalTextBuffer {
                 sb.append(line);
                 sb.append('\n');
             }
-//            return sb.toString().replace(String.valueOf(CharUtils.FILL_CHAR), "");
             return sb.toString();
         } finally {
             myLock.unlock();

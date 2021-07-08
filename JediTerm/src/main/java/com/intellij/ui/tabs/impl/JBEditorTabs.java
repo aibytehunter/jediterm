@@ -144,7 +144,9 @@ public class JBEditorTabs extends JBTabsImpl {
   }
 
   public boolean isAlphabeticalMode() {
-    return Registry.is(TABS_ALPHABETICAL_KEY);
+    // 不使用字母模式
+    // return Registry.is(TABS_ALPHABETICAL_KEY);
+    return false;
   }
 
   public static void setAlphabeticalMode(boolean on) {

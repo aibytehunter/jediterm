@@ -226,6 +226,12 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
                         mySelection = null;
                         repaint();
                     }
+                } else if (e.getButton() == MouseEvent.BUTTON3) {
+                    if (!e.isControlDown()) {
+                        handlePasteSelection();
+                    }
+                    mySelectionStartPoint = null;
+                    mySelection = null;
                 }
             }
 
@@ -283,8 +289,6 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
                         HyperlinkStyle contextHyperlink = findHyperlink(e.getPoint());
                         JPopupMenu popup = createPopupMenu(contextHyperlink != null ? contextHyperlink.getLinkInfo() : null, e);
                         popup.show(e.getComponent(), e.getX(), e.getY());
-                    } else {
-                        handlePasteSelection();
                     }
                 }
                 repaint();

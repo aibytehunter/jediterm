@@ -149,8 +149,9 @@ public abstract class AbstractTerminalFrame {
             }
         });
 
-        final JMenuBar mb = getJMenuBar();
-        frame.setJMenuBar(mb);
+//        不使用菜单栏
+//        final JMenuBar mb = getJMenuBar();
+//        frame.setJMenuBar(mb);
         sizeFrameForTerm(frame);
         frame.getContentPane().add("Center", myTerminal.getComponent());
 

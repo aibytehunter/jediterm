@@ -122,7 +122,7 @@ public abstract class AbstractTabbedTerminalWidget<T extends JediTermWidget> ext
 
     private void addTab(T terminal, AbstractTabs<T> tabs, String name) {
         tabs.addTab(name, terminal);
-        tabs.setTabComponentAt(tabs.getTabCount(), createTabComponent(tabs, terminal));
+        tabs.setTabComponentAt(tabs.getTabCount() - 1, createTabComponent(tabs, terminal));
         tabs.setSelectedComponent(terminal);
     }
 
