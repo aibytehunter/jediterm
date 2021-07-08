@@ -14,23 +14,12 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collections;
 
 public class DefaultSettingsProvider implements SettingsProvider {
-    public static Font localFont;
 
-    static {
-        try {
-            localFont = Font.createFont(Font.TRUETYPE_FONT, new File("D://YaHeiConsolasHybrid.ttf"));
-            localFont = localFont.deriveFont(java.awt.Font.PLAIN, 16);
-        } catch (FontFormatException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     @Override
     public @NotNull TerminalActionPresentation getNewSessionActionPresentation() {
@@ -123,8 +112,17 @@ public class DefaultSettingsProvider implements SettingsProvider {
     public Font getTerminalFont() {
         String fontName;
         if (UIUtil.isWindows) {
-            fontName = "Consolas";
-            return localFont;
+            fontName = "Monospaced";
+            Font localFont;
+            try (InputStream inputStream = DefaultSettingsProvider.class.getResourceAsStream("/YaHeiConsolasHybrid.ttf")) {
+                localFont = Font.createFont(Font.TRUETYPE_FONT, inputStream);
+                localFont = localFont.deriveFont(java.awt.Font.PLAIN, 16);
+                return localFont;
+            } catch (FontFormatException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         } else if (UIUtil.isMac) {
             fontName = "Menlo";
         } else {
