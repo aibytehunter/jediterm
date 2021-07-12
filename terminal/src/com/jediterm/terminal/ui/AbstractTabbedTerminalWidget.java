@@ -15,6 +15,7 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.dnd.DropTarget;
 import java.awt.event.*;
 import java.util.List;
 import java.util.Set;
@@ -114,6 +115,9 @@ public abstract class AbstractTabbedTerminalWidget<T extends JediTermWidget> ext
         String name = generateUniqueName(terminal, tabs);
 
         addTab(terminal, tabs, name);
+
+        //创建拖放目标（目标窗口要大一点，因此把root设为目标窗口）
+        DropTarget dropTarget = new DropTarget(terminal, terminal);
     }
 
     private String generateUniqueName(T terminal, AbstractTabs<T> tabs) {

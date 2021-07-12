@@ -138,6 +138,14 @@ public abstract class AbstractTerminalFrame {
     protected AbstractTerminalFrame() {
         System.setProperty("awt.useSystemAAFontSettings", "on");
         System.setProperty("swing.aatext", "true");
+        try {
+//            UIManager.setLookAndFeel("org.fife.plaf.Office2003.Office2003LookAndFeel");
+            //UIManager.setLookAndFeel("org.fife.plaf.OfficeXP.OfficeXPLookAndFeel");
+            UIManager.setLookAndFeel("org.fife.plaf.VisualStudio2005.VisualStudio2005LookAndFeel");
+        } catch (Exception e) {
+            System.err.println("Oops!  Something went wrong!");
+        }
+
         myTerminal = createTabbedTerminalWidget();
 
         final JFrame frame = new JFrame("JediTerm");

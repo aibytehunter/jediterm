@@ -41,6 +41,7 @@ dependencies {
     compile 'net.java.dev.jna:jna:4.5.0'
     compile 'net.java.dev.jna:jna-platform:4.5.0'
     compile ":trove4j:"
+    compile ":OfficeLnFs:"
     compile 'com.weblookandfeel:weblaf-ui:1.2.13'
 }
 
