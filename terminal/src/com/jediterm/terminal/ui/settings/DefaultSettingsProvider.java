@@ -144,13 +144,17 @@ public class DefaultSettingsProvider implements SettingsProvider {
 
     @Override
     public TextStyle getDefaultStyle() {
-//        return new TextStyle(TerminalColor.BLACK, TerminalColor.WHITE);
         return new TextStyle(TerminalColor.rgb(235, 235, 235), TerminalColor.rgb(33, 33, 33));
     }
 
     @Override
     public TextStyle getSelectionColor() {
         return new TextStyle(TerminalColor.WHITE, TerminalColor.rgb(82, 109, 165));
+    }
+
+    @Override
+    public TextStyle getFoundSelectionColor() {
+        return new TextStyle(TerminalColor.WHITE, TerminalColor.rgb(222, 150, 50));
     }
 
     @Override

@@ -775,7 +775,7 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
                     if (mySelection != null) {
                         Pair<Integer, Integer> interval = mySelection.intersect(x, row + myClientScrollOrigin, characters.length());
                         if (interval != null) {
-                            TextStyle selectionStyle = getSelectionStyle(style);
+                            TextStyle selectionStyle = getFoundSelectionStyle(style);
                             CharBuffer selectionChars = characters.subBuffer(interval.first - x, interval.second);
 
                             drawCharacters(interval.first, row, selectionStyle, selectionChars, gfx);
@@ -840,6 +840,18 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
         }
         TextStyle.Builder builder = style.toBuilder();
         TextStyle mySelectionStyle = mySettingsProvider.getSelectionColor();
+        builder.setBackground(mySelectionStyle.getBackground());
+        builder.setForeground(mySelectionStyle.getForeground());
+        if (builder instanceof HyperlinkStyle.Builder) {
+            return ((HyperlinkStyle.Builder) builder).build(true);
+        }
+        return builder.build();
+    }
+
+    @NotNull
+    private TextStyle getFoundSelectionStyle(@NotNull TextStyle style) {
+        TextStyle.Builder builder = style.toBuilder();
+        TextStyle mySelectionStyle = mySettingsProvider.getFoundSelectionColor();
         builder.setBackground(mySelectionStyle.getBackground());
         builder.setForeground(mySelectionStyle.getForeground());
         if (builder instanceof HyperlinkStyle.Builder) {
@@ -1191,10 +1203,7 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
 
         Color backgroundColor = getPalette().getBackground(myStyleState.getBackground(style.getBackgroundForRun()));
         gfx.setColor(backgroundColor);
-        gfx.fillRect(xCoord,
-                yCoord,
-                width,
-                height);
+        gfx.fillRect(xCoord, yCoord, width, height);
 
         if (buf.isNul()) {
             return; // nothing more to do
@@ -1667,7 +1676,6 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
             // Command + backtick is a short-cut on Mac OSX, so we shouldn't type anything
             return;
         }
-
         myTerminalStarter.sendString(new String(obuffer));
         e.consume();
 

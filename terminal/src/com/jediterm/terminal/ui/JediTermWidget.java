@@ -30,6 +30,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
+import java.util.StringJoiner;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -305,9 +306,9 @@ public class JediTermWidget extends JPanel implements TerminalSession, TerminalW
                         myTerminalPanel.setFindResult(null);
                         myTerminalPanel.requestFocusInWindow();
                     } else if (keyEvent.getKeyCode() == KeyEvent.VK_ENTER || keyEvent.getKeyCode() == KeyEvent.VK_UP) {
-                        myFindComponent.nextFindResultItem(myTerminalPanel.selectNextFindResultItem());
-                    } else if (keyEvent.getKeyCode() == KeyEvent.VK_DOWN) {
                         myFindComponent.prevFindResultItem(myTerminalPanel.selectPrevFindResultItem());
+                    } else if (keyEvent.getKeyCode() == KeyEvent.VK_DOWN) {
+                        myFindComponent.nextFindResultItem(myTerminalPanel.selectNextFindResultItem());
                     } else {
                         super.keyPressed(keyEvent);
                     }
@@ -570,8 +571,20 @@ public class JediTermWidget extends JPanel implements TerminalSession, TerminalW
 
         private void updateLabel(FindItem selectedItem) {
             FindResult result = myTerminalPanel.getFindResult();
-            label.setText(((selectedItem != null) ? selectedItem.getIndex() : 0)
-                    + " of " + ((result != null) ? result.getItems().size() : 0));
+            StringBuilder builder = new StringBuilder();
+            if (selectedItem != null) {
+                builder.append(selectedItem.getIndex() == 0);
+            } else {
+                builder.append(0);
+            }
+            builder.append(" of ");
+            if (result != null) {
+                builder.append(result.getItems().size());
+            } else {
+                builder.append(0);
+            }
+            label.setText(builder.toString());
+
         }
 
         @Override

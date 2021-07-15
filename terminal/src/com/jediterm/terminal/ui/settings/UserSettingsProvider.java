@@ -33,6 +33,8 @@ public interface UserSettingsProvider {
 
   TextStyle getSelectionColor();
 
+  TextStyle getFoundSelectionColor();
+
   TextStyle getFoundPatternColor();
 
   TextStyle getHyperlinkColor();
@@ -64,7 +66,7 @@ public interface UserSettingsProvider {
   boolean forceActionOnMouseReporting();
 
   int getBufferMaxLinesCount();
-  
+
   boolean altSendsEscape();
 
   boolean ambiguousCharsAreDoubleWidth();

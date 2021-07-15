@@ -327,6 +327,7 @@ public class JediEmulator extends DataStreamIteratingEmulator {
    * @param msg The message describing the sequence
    */
   private static void unsupported(String msg) {
+    LOG.error("Unsupported control characters: " + msg);
     unhandledLogThrottler("Unsupported control characters: " + msg);
   }
 
