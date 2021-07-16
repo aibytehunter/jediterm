@@ -103,10 +103,11 @@ public class TerminalStarter implements TerminalOutputStream {
 
     @Override
     public void sendString(final String string) {
-
         execute(() -> {
             try {
-                myTtyConnector.write(string);
+                //TODO ·删除问题
+                String input = string.replace("·", "`");
+                myTtyConnector.write(input);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

@@ -108,21 +108,26 @@ public class DefaultSettingsProvider implements SettingsProvider {
         return ColorPaletteImpl.XTERM_PALETTE;
     }
 
+    /**
+     * @return
+     */
     @Override
     public Font getTerminalFont() {
         String fontName;
         if (UIUtil.isWindows) {
-            fontName = "Monospaced";
             Font localFont;
             try (InputStream inputStream = DefaultSettingsProvider.class.getResourceAsStream("/YaHeiConsolasHybrid.ttf")) {
-                localFont = Font.createFont(Font.TRUETYPE_FONT, inputStream);
-                localFont = localFont.deriveFont(java.awt.Font.PLAIN, 16);
+//            try (InputStream inputStream = DefaultSettingsProvider.class.getResourceAsStream("/YaHeiConsolasHybrid.ttf")) {
+//            try (InputStream inputStream = DefaultSettingsProvider.class.getResourceAsStream("/MSYHMONO.ttf")) {
+                localFont = Font.createFont(Font.PLAIN, inputStream);
+                localFont = localFont.deriveFont(Font.PLAIN, 17);
                 return localFont;
             } catch (FontFormatException e) {
                 e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            fontName = "Monospaced";
         } else if (UIUtil.isMac) {
             fontName = "Menlo";
         } else {
@@ -149,7 +154,7 @@ public class DefaultSettingsProvider implements SettingsProvider {
 
     @Override
     public TextStyle getSelectionColor() {
-        return new TextStyle(TerminalColor.WHITE, TerminalColor.rgb(82, 109, 165));
+        return new TextStyle(TerminalColor.BLACK, TerminalColor.rgb(255, 255, 255));
     }
 
     @Override
@@ -172,16 +177,31 @@ public class DefaultSettingsProvider implements SettingsProvider {
         return HyperlinkStyle.HighlightMode.HOVER;
     }
 
+    /**
+     * 是否使用反色选择
+     *
+     * @return
+     */
     @Override
     public boolean useInverseSelectionColor() {
         return true;
     }
 
+    /**
+     * 选择复制
+     *
+     * @return
+     */
     @Override
     public boolean copyOnSelect() {
         return emulateX11CopyPaste();
     }
 
+    /**
+     * 鼠标中键粘贴
+     *
+     * @return
+     */
     @Override
     public boolean pasteOnMiddleMouseClick() {
         return emulateX11CopyPaste();
@@ -199,7 +219,7 @@ public class DefaultSettingsProvider implements SettingsProvider {
 
     @Override
     public int maxRefreshRate() {
-        return 50;
+        return 60;
     }
 
     @Override

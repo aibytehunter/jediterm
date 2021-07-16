@@ -58,6 +58,7 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
     private MouseMode myMouseMode = MouseMode.MOUSE_REPORTING_NONE;
     private Point mySelectionStartPoint = null;
     private TerminalSelection mySelection = null;
+    private TerminalSelection myFindSelection = null;
 
     private final TerminalCopyPasteHandler myCopyPasteHandler;
 
@@ -458,10 +459,10 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
         if (myFindResult != null) {
             SubstringFinder.FindResult.FindItem item = next ? myFindResult.nextFindItem() : myFindResult.prevFindItem();
             if (item != null) {
-                mySelection = new TerminalSelection(new Point(item.getStart().x, item.getStart().y - myTerminalTextBuffer.getHistoryLinesCount()),
+                myFindSelection = new TerminalSelection(new Point(item.getStart().x, item.getStart().y - myTerminalTextBuffer.getHistoryLinesCount()),
                         new Point(item.getEnd().x, item.getEnd().y - myTerminalTextBuffer.getHistoryLinesCount()));
-                if (mySelection.getStart().y < getTerminalTextBuffer().getHeight() / 2) {
-                    myBoundedRangeModel.setValue(mySelection.getStart().y - getTerminalTextBuffer().getHeight() / 2);
+                if (myFindSelection.getStart().y < getTerminalTextBuffer().getHeight() / 2) {
+                    myBoundedRangeModel.setValue(myFindSelection.getStart().y - getTerminalTextBuffer().getHeight() / 2);
                 } else {
                     myBoundedRangeModel.setValue(0);
                 }
@@ -771,11 +772,19 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
                             }
                         }
                     }
+                    if (myFindSelection != null) {
+                        Pair<Integer, Integer> interval = myFindSelection.intersect(x, row + myClientScrollOrigin, characters.length());
+                        if (interval != null) {
+                            TextStyle selectionStyle = getFoundSelectionStyle(style);
+                            CharBuffer selectionChars = characters.subBuffer(interval.first - x, interval.second);
 
+                            drawCharacters(interval.first, row, selectionStyle, selectionChars, gfx);
+                        }
+                    }
                     if (mySelection != null) {
                         Pair<Integer, Integer> interval = mySelection.intersect(x, row + myClientScrollOrigin, characters.length());
                         if (interval != null) {
-                            TextStyle selectionStyle = getFoundSelectionStyle(style);
+                            TextStyle selectionStyle = getSelectionStyle(style);
                             CharBuffer selectionChars = characters.subBuffer(interval.first - x, interval.second);
 
                             drawCharacters(interval.first, row, selectionStyle, selectionChars, gfx);
@@ -1626,7 +1635,6 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
         try {
             final int keycode = e.getKeyCode();
             final char keychar = e.getKeyChar();
-
             // numLock does not change the code sent by keypad VK_DELETE
             // although it send the char '.'
             if (keycode == KeyEvent.VK_DELETE && keychar == '.') {
