@@ -31,6 +31,7 @@ dependencies {
     compile 'org.jetbrains:annotations:18.0.0'
     compile 'com.google.guava:guava:27.1-jre'
     compile group: 'com.weblookandfeel', name: 'weblaf-parent', version: '1.2.12', ext: 'pom'
+    compile 'com.formdev:flatlaf:1.4'
     testCompile 'junit:junit:4.12'
 }
 

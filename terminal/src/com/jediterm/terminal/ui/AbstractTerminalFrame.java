@@ -1,5 +1,6 @@
 package com.jediterm.terminal.ui;
 
+import com.formdev.flatlaf.FlatLightLaf;
 import com.jediterm.terminal.RequestOrigin;
 import com.jediterm.terminal.TabbedTerminalWidget;
 import com.jediterm.terminal.TtyConnector;
@@ -141,7 +142,9 @@ public abstract class AbstractTerminalFrame {
         try {
 //            UIManager.setLookAndFeel("org.fife.plaf.Office2003.Office2003LookAndFeel");
             //UIManager.setLookAndFeel("org.fife.plaf.OfficeXP.OfficeXPLookAndFeel");
-            UIManager.setLookAndFeel("org.fife.plaf.VisualStudio2005.VisualStudio2005LookAndFeel");
+//            UIManager.setLookAndFeel("org.fife.plaf.VisualStudio2005.VisualStudio2005LookAndFeel");
+//            UIManager.setLookAndFeel("com.bulenkov.darcula.DarculaLaf");
+            FlatLightLaf.setup();
         } catch (Exception e) {
             System.err.println("Oops!  Something went wrong!");
         }
