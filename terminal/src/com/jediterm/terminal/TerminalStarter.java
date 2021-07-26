@@ -21,108 +21,112 @@ import java.util.function.BiConsumer;
  * @author traff
  */
 public class TerminalStarter implements TerminalOutputStream {
-    private static final Logger LOG = Logger.getLogger(TerminalStarter.class);
+  private static final Logger LOG = Logger.getLogger(TerminalStarter.class);
 
-    private final Emulator myEmulator;
+  private final Emulator myEmulator;
 
-    private final Terminal myTerminal;
+  private final Terminal myTerminal;
 
-    private final TtyConnector myTtyConnector;
+  private final TtyConnector myTtyConnector;
 
-    private final ScheduledExecutorService myEmulatorExecutor = Executors.newSingleThreadScheduledExecutor();
+  private final ScheduledExecutorService myEmulatorExecutor = Executors.newSingleThreadScheduledExecutor();
 
-    public TerminalStarter(final Terminal terminal, final TtyConnector ttyConnector, TerminalDataStream dataStream) {
-        myTtyConnector = ttyConnector;
-        myTerminal = terminal;
-        myTerminal.setTerminalOutput(this);
-        myEmulator = createEmulator(dataStream, terminal);
+  public TerminalStarter(final Terminal terminal, final TtyConnector ttyConnector, TerminalDataStream dataStream) {
+    myTtyConnector = ttyConnector;
+    myTerminal = terminal;
+    myTerminal.setTerminalOutput(this);
+    myEmulator = createEmulator(dataStream, terminal);
+  }
+
+  protected JediEmulator createEmulator(TerminalDataStream dataStream, Terminal terminal) {
+    return new JediEmulator(dataStream, terminal);
+  }
+
+  private void execute(Runnable runnable) {
+    if (!myEmulatorExecutor.isShutdown()) {
+      myEmulatorExecutor.execute(runnable);
     }
+  }
 
-    protected JediEmulator createEmulator(TerminalDataStream dataStream, Terminal terminal) {
-        return new JediEmulator(dataStream, terminal);
+  public void start() {
+    try {
+      while (!Thread.currentThread().isInterrupted() && myEmulator.hasNext()) {
+        myEmulator.next();
+      }
     }
+    catch (final InterruptedIOException e) {
+      LOG.info("Terminal exiting");
+    }
+    catch (final Exception e) {
+      if (!myTtyConnector.isConnected()) {
+        myTerminal.disconnected();
+        return;
+      }
+      LOG.error("Caught exception in terminal thread", e);
+    }
+  }
 
-    private void execute(Runnable runnable) {
-        if (!myEmulatorExecutor.isShutdown()) {
-            myEmulatorExecutor.execute(runnable);
-        }
-    }
+  public byte[] getCode(final int key, final int modifiers) {
+    return myTerminal.getCodeForKey(key, modifiers);
+  }
 
-    public void start() {
-        try {
-            while (!Thread.currentThread().isInterrupted() && myEmulator.hasNext()) {
-                myEmulator.next();
-            }
-        } catch (final InterruptedIOException e) {
-            LOG.info("Terminal exiting");
-        } catch (final Exception e) {
-            if (!myTtyConnector.isConnected()) {
-                myTerminal.disconnected();
-                return;
-            }
-            LOG.error("Caught exception in terminal thread", e);
-        }
-    }
+  public void postResize(@NotNull Dimension dimension, @NotNull RequestOrigin origin) {
+    execute(() -> {
+      resize(myEmulator, myTerminal, myTtyConnector, dimension, origin, (millisDelay, runnable) -> {
+        myEmulatorExecutor.schedule(runnable, millisDelay, TimeUnit.MILLISECONDS);
+      });
+    });
+  }
 
-    public byte[] getCode(final int key, final int modifiers) {
-        return myTerminal.getCodeForKey(key, modifiers);
-    }
+  /**
+   * Resizes terminal and tty connector, should be called on a pooled thread.
+   */
+  public static void resize(@NotNull Emulator emulator,
+                            @NotNull Terminal terminal,
+                            @NotNull TtyConnector ttyConnector,
+                            @NotNull Dimension newTermSize,
+                            @NotNull RequestOrigin origin,
+                            @NotNull BiConsumer<Long, Runnable> taskScheduler) {
+    CompletableFuture<?> promptUpdated = ((JediEmulator)emulator).getPromptUpdatedAfterResizeFuture(taskScheduler);
+    terminal.resize(newTermSize, origin, promptUpdated);
+    ttyConnector.resize(newTermSize);
+  }
 
-    public void postResize(@NotNull Dimension dimension, @NotNull RequestOrigin origin) {
-        execute(() -> {
-            resize(myEmulator, myTerminal, myTtyConnector, dimension, origin, (millisDelay, runnable) -> {
-                myEmulatorExecutor.schedule(runnable, millisDelay, TimeUnit.MILLISECONDS);
-            });
-        });
-    }
+  @Override
+  public void sendBytes(final byte[] bytes) {
+    execute(() -> {
+      try {
+        myTtyConnector.write(bytes);
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
+  }
 
-    /**
-     * Resizes terminal and tty connector, should be called on a pooled thread.
-     */
-    public static void resize(@NotNull Emulator emulator,
-                              @NotNull Terminal terminal,
-                              @NotNull TtyConnector ttyConnector,
-                              @NotNull Dimension newTermSize,
-                              @NotNull RequestOrigin origin,
-                              @NotNull BiConsumer<Long, Runnable> taskScheduler) {
-        CompletableFuture<?> promptUpdated = ((JediEmulator) emulator).getPromptUpdatedAfterResizeFuture(taskScheduler);
-        terminal.resize(newTermSize, origin, promptUpdated);
-        ttyConnector.resize(newTermSize);
-    }
+  @Override
+  public void sendString(final String string) {
+    execute(() -> {
+      try {
+        myTtyConnector.write(string);
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
+  }
 
-    @Override
-    public void sendBytes(final byte[] bytes) {
-        execute(() -> {
-            try {
-                myTtyConnector.write(bytes);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        });
-    }
-
-    @Override
-    public void sendString(final String string) {
-        execute(() -> {
-            try {
-                //TODO ·删除问题
-                String input = string.replace("·", "`");
-                myTtyConnector.write(input);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        });
-    }
-
-    public void close() {
-        execute(() -> {
-            try {
-                myTtyConnector.close();
-            } catch (Exception e) {
-                LOG.error("Error closing terminal", e);
-            } finally {
-                myEmulatorExecutor.shutdown();
-            }
-        });
-    }
+  public void close() {
+    execute(() -> {
+      try {
+        myTtyConnector.close();
+      }
+      catch (Exception e) {
+        LOG.error("Error closing terminal", e);
+      }
+      finally {
+        myEmulatorExecutor.shutdown();
+      }
+    });
+  }
 }

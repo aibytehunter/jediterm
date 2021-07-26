@@ -25,6 +25,7 @@ public class TerminalLine {
   private TextEntries myTextEntries = new TextEntries();
   private boolean myWrapped = false;
   private final List<TerminalLineIntervalHighlighting> myCustomHighlightings = new ArrayList<>();
+  private TerminalLine myTypeAheadLine;
 
   public TerminalLine() {
   }
@@ -52,7 +53,20 @@ public class TerminalLine {
     return sb.toString();
   }
 
+  public @NotNull TerminalLine copy() {
+    TerminalLine result = new TerminalLine();
+    for (TextEntry entry : myTextEntries.entries()) {
+      result.myTextEntries.add(entry);
+    }
+    result.myWrapped = myWrapped;
+    return result;
+  }
+
   public char charAt(int x) {
+    TerminalLine typeAheadLine = myTypeAheadLine;
+    if (typeAheadLine != null) {
+      return typeAheadLine.charAt(x);
+    }
     String text = getText();
     return x < text.length() ? text.charAt(x) : CharUtils.EMPTY_CHAR;
   }
@@ -169,7 +183,7 @@ public class TerminalLine {
         p = x;
       }
       if (dx + remaining < len) {
-        //part that left after deleting count
+        //part that left after deleting count 
         newEntries.add(new TextEntry(entry.getStyle(), entry.getText().subBuffer(dx + remaining, len - (dx + remaining))));
         remaining = 0;
       } else {
@@ -229,11 +243,7 @@ public class TerminalLine {
 
   public synchronized void clearArea(int leftX, int rightX, @NotNull TextStyle style) {
     if (rightX == -1) {
-      rightX = myTextEntries.length();
-    }
-    //TODO 尺寸
-    if (rightX - leftX <= 0) {
-      return;
+      rightX = Math.max(myTextEntries.length(), leftX);
     }
     writeCharacters(leftX, style, new CharBuffer(
             rightX >= myTextEntries.length() ? CharUtils.NUL_CHAR : CharUtils.EMPTY_CHAR,
@@ -254,18 +264,25 @@ public class TerminalLine {
     return null;
   }
 
-  //TODO 测试
   public synchronized void process(int y, StyledTextConsumer consumer, int startRow) {
     int x = 0;
     int nulIndex = -1;
-    for (TextEntry te : Lists.newArrayList(myTextEntries)) {
+    TerminalLineIntervalHighlighting highlighting = myCustomHighlightings.stream().findFirst().orElse(null);
+    TerminalLine typeAheadLine = myTypeAheadLine;
+    TextEntries textEntries = typeAheadLine != null ? typeAheadLine.myTextEntries : myTextEntries;
+    for (TextEntry te : textEntries) {
       if (te.getText().isNul()) {
         if (nulIndex < 0) {
           nulIndex = x;
         }
         consumer.consumeNul(x, y, nulIndex, te.getStyle(), te.getText(), startRow);
       } else {
-        consumer.consume(x, y, te.getStyle(), te.getText(), startRow);
+        if (highlighting != null && te.getLength() > 0 && highlighting.intersectsWith(x, x + te.getLength())) {
+          processIntersection(x, y, te, consumer, startRow, highlighting);
+        }
+        else {
+          consumer.consume(x, y, te.getStyle(), te.getText(), startRow);
+        }
       }
       x += te.getLength();
     }
@@ -343,6 +360,10 @@ public class TerminalLine {
         Joiner.on("|").join(myTextEntries.myTextEntries.stream().map(
             entry -> entry.getText().toString()).collect(Collectors.toList())
         );
+  }
+
+  void setTypeAheadLine(@Nullable TerminalLine typeAheadLine) {
+    myTypeAheadLine = typeAheadLine;
   }
 
   public static class TextEntry {

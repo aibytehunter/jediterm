@@ -53,18 +53,12 @@ public class ArrayTerminalDataStream implements TerminalDataStream {
         myBuf[--myOffset] = c;
     }
 
-    /**
-     * 终端输出显示
-     *
-     * @param maxChars
-     * @return
-     * @throws IOException
-     */
     public String readNonControlCharacters(int maxChars) throws IOException {
         String nonControlCharacters = CharUtils.getNonControlCharacters(maxChars, myBuf, myOffset, myLength);
-        //TODO 调整显示样式
+        
         myOffset += nonControlCharacters.length();
         myLength -= nonControlCharacters.length();
+
         return nonControlCharacters;
     }
 

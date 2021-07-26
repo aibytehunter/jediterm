@@ -9,6 +9,7 @@ import com.jediterm.terminal.debug.DebugBufferType;
 import com.jediterm.terminal.model.JediTerminal;
 import com.jediterm.terminal.model.StyleState;
 import com.jediterm.terminal.model.TerminalTextBuffer;
+import com.jediterm.terminal.model.TerminalTypeAheadManager;
 import com.jediterm.terminal.model.hyperlinks.HyperlinkFilter;
 import com.jediterm.terminal.model.hyperlinks.TextProcessing;
 import com.jediterm.terminal.ui.settings.SettingsProvider;
@@ -45,6 +46,7 @@ public class JediTermWidget extends JPanel implements TerminalSession, TerminalW
     protected final JScrollBar myScrollBar;
     protected final JediTerminal myTerminal;
     protected final AtomicBoolean mySessionRunning = new AtomicBoolean();
+    private final TerminalTypeAheadManager myTypeAheadManager;
     private SearchComponent myFindComponent;
     private final PreConnectHandler myPreConnectHandler;
     private TtyConnector myTtyConnector;
@@ -79,6 +81,8 @@ public class JediTermWidget extends JPanel implements TerminalSession, TerminalW
 
         myTerminalPanel = createTerminalPanel(mySettingsProvider, styleState, terminalTextBuffer);
         myTerminal = new JediTerminal(myTerminalPanel, terminalTextBuffer, styleState);
+        myTypeAheadManager = new TerminalTypeAheadManager(terminalTextBuffer, myTerminal, settingsProvider);
+        myTerminalPanel.setTypeAheadManager(myTypeAheadManager);
 
         myTerminal.setModeEnabled(TerminalMode.AltSendsEscape, mySettingsProvider.altSendsEscape());
 
@@ -144,8 +148,10 @@ public class JediTermWidget extends JPanel implements TerminalSession, TerminalW
         myTerminalPanel.setTerminalStarter(myTerminalStarter);
     }
 
-    protected TerminalStarter createTerminalStarter(JediTerminal terminal, TtyConnector connector) {
-        return new TerminalStarter(terminal, connector, new TtyBasedArrayDataStream(connector));
+    protected TerminalStarter createTerminalStarter(@NotNull JediTerminal terminal, @NotNull TtyConnector connector) {
+        return new TerminalStarter(terminal, connector, new TypeAheadTerminalDataStream(
+                new TtyBasedArrayDataStream(connector), myTypeAheadManager
+        ));
     }
 
     @Override
@@ -306,9 +312,9 @@ public class JediTermWidget extends JPanel implements TerminalSession, TerminalW
                         myTerminalPanel.setFindResult(null);
                         myTerminalPanel.requestFocusInWindow();
                     } else if (keyEvent.getKeyCode() == KeyEvent.VK_ENTER || keyEvent.getKeyCode() == KeyEvent.VK_UP) {
-                        myFindComponent.prevFindResultItem(myTerminalPanel.selectPrevFindResultItem());
-                    } else if (keyEvent.getKeyCode() == KeyEvent.VK_DOWN) {
                         myFindComponent.nextFindResultItem(myTerminalPanel.selectNextFindResultItem());
+                    } else if (keyEvent.getKeyCode() == KeyEvent.VK_DOWN) {
+                        myFindComponent.prevFindResultItem(myTerminalPanel.selectPrevFindResultItem());
                     } else {
                         super.keyPressed(keyEvent);
                     }
@@ -571,20 +577,8 @@ public class JediTermWidget extends JPanel implements TerminalSession, TerminalW
 
         private void updateLabel(FindItem selectedItem) {
             FindResult result = myTerminalPanel.getFindResult();
-            StringBuilder builder = new StringBuilder();
-            if (selectedItem != null) {
-                builder.append(selectedItem.getIndex() == 0);
-            } else {
-                builder.append(0);
-            }
-            builder.append(" of ");
-            if (result != null) {
-                builder.append(result.getItems().size());
-            } else {
-                builder.append(0);
-            }
-            label.setText(builder.toString());
-
+            label.setText(((selectedItem != null) ? selectedItem.getIndex() : 0)
+                    + " of " + ((result != null) ? result.getItems().size() : 0));
         }
 
         @Override

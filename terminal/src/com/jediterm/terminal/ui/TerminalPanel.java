@@ -92,7 +92,6 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
     private int myBlinkingPeriod = 500;
     private TerminalCoordinates myCoordsAccessor;
 
-    private String myCurrentPath; //TODO: handle current path if available
     private SubstringFinder.FindResult myFindResult;
 
     private LinkInfo myHoveredHyperlink = null;
@@ -100,6 +99,8 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
     private int myCursorType = Cursor.DEFAULT_CURSOR;
     private final TerminalKeyHandler myTerminalKeyHandler = new TerminalKeyHandler();
     private LinkInfo.HoverConsumer myLinkHoverConsumer;
+    private TerminalTypeAheadManager myTypeAheadManager;
+    private volatile boolean myBracketedPasteMode;
 
     public TerminalPanel(@NotNull SettingsProvider settingsProvider, @NotNull TerminalTextBuffer terminalTextBuffer, @NotNull StyleState styleState) {
         mySettingsProvider = settingsProvider;
@@ -115,12 +116,11 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
         enableEvents(AWTEvent.KEY_EVENT_MASK | AWTEvent.INPUT_METHOD_EVENT_MASK);
         enableInputMethods(true);
 
-        terminalTextBuffer.addModelListener(new TerminalModelListener() {
-            @Override
-            public void modelChanged() {
-                repaint();
-            }
-        });
+        terminalTextBuffer.addModelListener(this::repaint);
+    }
+
+    void setTypeAheadManager(@NotNull TerminalTypeAheadManager typeAheadManager) {
+        myTypeAheadManager = typeAheadManager;
     }
 
     @NotNull
@@ -584,8 +584,10 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
             }
             text = text.replace('\n', '\r');
 
+            if (myBracketedPasteMode) {
+                text = "\u001b[200~" + text + "\u001b[201~";
+            }
             text = text.replace(String.valueOf(CharUtils.FILL_CHAR), "");
-
             myTerminalStarter.sendString(text);
         } catch (RuntimeException e) {
             LOG.info(e);
@@ -620,6 +622,7 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
             if (newSize != null) {
                 JediTerminal.ensureTermMinimumSize(newSize);
                 if (!myTermSize.equals(newSize)) {
+                    myTypeAheadManager.onResize();
                     myTerminalStarter.postResize(newSize, RequestOrigin.User);
                 }
             }
@@ -792,6 +795,26 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
                     }
                 }
 
+//                @Override
+//                public void consumeNul(int x, int y, int nulIndex, TextStyle style, CharBuffer characters, int startRow) {
+//                    int row = y - startRow;
+//                    if (mySelection != null) {
+//                        // compute intersection with all NUL areas, non-breaking
+//                        Pair<Integer, Integer> interval = mySelection.intersect(nulIndex, row + myClientScrollOrigin, columnCount - nulIndex);
+//                        if (interval != null) {
+//                            TextStyle selectionStyle = getSelectionStyle(style);
+//                            CharBuffer selectionChars = characters.subBuffer(interval.first - x, interval.second);
+//                            drawCharacters(interval.first, row, selectionStyle, selectionChars, gfx);
+//
+//                            //TODO 选中空白内容禁止选中整行
+////                            TextStyle selectionStyle = getSelectionStyle(style);
+////                            drawCharacters(x, row, selectionStyle, characters, gfx);
+//                            return;
+//                        }
+//                    }
+//                    drawCharacters(x, row, style, characters, gfx);
+//                }
+
                 @Override
                 public void consumeNul(int x, int y, int nulIndex, TextStyle style, CharBuffer characters, int startRow) {
                     int row = y - startRow;
@@ -800,12 +823,7 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
                         Pair<Integer, Integer> interval = mySelection.intersect(nulIndex, row + myClientScrollOrigin, columnCount - nulIndex);
                         if (interval != null) {
                             TextStyle selectionStyle = getSelectionStyle(style);
-                            CharBuffer selectionChars = characters.subBuffer(interval.first - x, interval.second);
-                            drawCharacters(interval.first, row, selectionStyle, selectionChars, gfx);
-
-                            //TODO 选中空白内容禁止选中整行
-//                            TextStyle selectionStyle = getSelectionStyle(style);
-//                            drawCharacters(x, row, selectionStyle, characters, gfx);
+                            drawCharacters(x, row, selectionStyle, characters, gfx);
                             return;
                         }
                     }
@@ -1039,6 +1057,9 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
         }
 
         public int getCoordX() {
+            if (myTypeAheadManager != null) {
+                return myTypeAheadManager.getCursorX() - 1;
+            }
             return myCursorCoordinates.x;
         }
 
@@ -1186,7 +1207,6 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
         drawCharacters(x, y, style, buf, gfx, true);
     }
 
-    //TODO 此处select调整选中内容
     private void drawCharacters(int x, int y, TextStyle style, CharBuffer buf, Graphics2D gfx,
                                 boolean includeSpaceBetweenLines) {
         int xCoord = x * myCharSize.width + getInsetX();
@@ -1212,7 +1232,10 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
 
         Color backgroundColor = getPalette().getBackground(myStyleState.getBackground(style.getBackgroundForRun()));
         gfx.setColor(backgroundColor);
-        gfx.fillRect(xCoord, yCoord, width, height);
+        gfx.fillRect(xCoord,
+                yCoord,
+                width,
+                height);
 
         if (buf.isNul()) {
             return; // nothing more to do
@@ -1420,6 +1443,11 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
         return mySettingsProvider.ambiguousCharsAreDoubleWidth();
     }
 
+    @Override
+    public void setBracketedPasteMode(boolean enabled) {
+        myBracketedPasteMode = enabled;
+    }
+
     public LinesBuffer getScrollBuffer() {
         return myTerminalTextBuffer.getHistoryBuffer();
     }
@@ -1480,11 +1508,6 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
         if (myTerminalPanelListener != null) {
             myTerminalPanelListener.onTitleChanged(myWindowTitle);
         }
-    }
-
-    @Override
-    public void setCurrentPath(String path) {
-        myCurrentPath = path;
     }
 
     @Override
@@ -1635,6 +1658,7 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
         try {
             final int keycode = e.getKeyCode();
             final char keychar = e.getKeyChar();
+
             // numLock does not change the code sent by keypad VK_DELETE
             // although it send the char '.'
             if (keycode == KeyEvent.VK_DELETE && keychar == '.') {
@@ -1668,6 +1692,10 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
             }
         } catch (final Exception ex) {
             LOG.error("Error sending pressed key to emulator", ex);
+        } finally {
+            if (e.isConsumed() && myTypeAheadManager != null) {
+                myTypeAheadManager.onKeyEvent(e);
+            }
         }
     }
 
@@ -1684,6 +1712,7 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
             // Command + backtick is a short-cut on Mac OSX, so we shouldn't type anything
             return;
         }
+
         myTerminalStarter.sendString(new String(obuffer));
         e.consume();
 
@@ -1718,6 +1747,10 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
                 processCharacter(e);
             } catch (final Exception ex) {
                 LOG.error("Error sending typed key to emulator", ex);
+            } finally {
+                if (e.isConsumed() && myTypeAheadManager != null) {
+                    myTypeAheadManager.onKeyEvent(e);
+                }
             }
         }
     }

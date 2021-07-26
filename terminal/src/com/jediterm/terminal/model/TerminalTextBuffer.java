@@ -53,7 +53,6 @@ public class TerminalTextBuffer {
 
     private boolean myUsingAlternateBuffer = false;
 
-
     private final List<TerminalModelListener> myListeners = new CopyOnWriteArrayList<>();
 
     @Nullable
@@ -103,17 +102,6 @@ public class TerminalTextBuffer {
         }
     }
 
-    /**
-     * 尺寸调整
-     *
-     * @param pendingResize
-     * @param origin
-     * @param cursorX
-     * @param cursorY
-     * @param resizeHandler
-     * @param mySelection
-     * @return
-     */
     private Dimension doResize(@NotNull final Dimension pendingResize,
                                @NotNull final RequestOrigin origin,
                                final int cursorX,
@@ -194,7 +182,7 @@ public class TerminalTextBuffer {
         myListeners.remove(listener);
     }
 
-    private void fireModelChangeEvent() {
+    void fireModelChangeEvent() {
         for (TerminalModelListener modelListener : myListeners) {
             modelListener.modelChanged();
         }
@@ -302,10 +290,8 @@ public class TerminalTextBuffer {
         if (index >= 0) {
             if (index >= getHeight()) {
                 LOG.error("Attempt to get line out of bounds: " + index + " >= " + getHeight());
-                //TODO 高度问题
                 return TerminalLine.createEmpty();
             }
-
             return myScreenBuffer.getLine(index);
         } else {
             if (index < -getHistoryLinesCount()) {
@@ -517,5 +503,10 @@ public class TerminalTextBuffer {
 
     public int findScreenLineIndex(@NotNull TerminalLine line) {
         return myScreenBuffer.findLineIndex(line);
+    }
+
+    public void clearTypeAheadPredictions() {
+        myScreenBuffer.clearTypeAheadPredictions();
+        myHistoryBuffer.clearTypeAheadPredictions();
     }
 }

@@ -10,11 +10,11 @@ import com.intellij.util.EncodingEnvironmentUtil
 import com.jediterm.pty.PtyProcessTtyConnector
 import com.jediterm.terminal.LoggingTtyConnector
 import com.jediterm.terminal.TtyConnector
-import com.jediterm.terminal.ui.AbstractTerminalFrame
 import com.jediterm.terminal.ui.TerminalWidget
 import com.jediterm.terminal.ui.UIUtil
 import com.jediterm.terminal.ui.settings.DefaultTabbedSettingsProvider
 import com.jediterm.terminal.ui.settings.TabbedSettingsProvider
+import com.jediterm.ui.AbstractTerminalFrame
 import com.pty4j.PtyProcess
 import com.pty4j.PtyProcessBuilder
 import org.apache.log4j.BasicConfigurator

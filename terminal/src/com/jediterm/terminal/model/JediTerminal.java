@@ -255,11 +255,6 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
     }
 
     @Override
-    public void setCurrentPath(String path) {
-        myDisplay.setCurrentPath(path);
-    }
-
-    @Override
     public void backspace() {
         myCursorX -= 1;
         if (myCursorX < 0) {
@@ -1008,6 +1003,11 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
     }
 
     @Override
+    public void setBracketedPasteMode(boolean enabled) {
+        myDisplay.setBracketedPasteMode(enabled);
+    }
+
+    @Override
     public void setMouseFormat(MouseFormat mouseFormat) {
         myMouseFormat = mouseFormat;
     }
@@ -1130,7 +1130,6 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
                 boolean doubleWidthCharacter = CharUtils.isDoubleWidthCharacter(codePoint, myDisplay.ambiguousCharsAreDoubleWidth());
                 if (doubleWidthCharacter) {
                     j++;
-                    //TODO 此处控制输出字符
                     buf[j] = CharUtils.FILL_CHAR;
                 }
                 j++;
@@ -1166,12 +1165,13 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
         return myStyleState;
     }
 
-    public SubstringFinder.FindResult searchInTerminalTextBuffer(String pattern, boolean ignoreCase) {
-        if (pattern.length() == 0) {
+    public SubstringFinder.FindResult searchInTerminalTextBuffer(final String pattern, boolean ignoreCase) {
+        String newPattern = pattern;
+        if (newPattern.length() == 0) {
             return null;
         }
-        pattern = stringToDoubleWidthCharacter(pattern);
-        final SubstringFinder finder = new SubstringFinder(pattern, ignoreCase);
+        newPattern = stringToDoubleWidthCharacter(pattern);
+        final SubstringFinder finder = new SubstringFinder(newPattern, ignoreCase);
 
         myTerminalTextBuffer.processHistoryAndScreenLines(-myTerminalTextBuffer.getHistoryLinesCount(), -1, new StyledTextConsumer() {
             @Override
@@ -1329,5 +1329,4 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
             myTabStops.add(Integer.valueOf(position));
         }
     }
-
 }

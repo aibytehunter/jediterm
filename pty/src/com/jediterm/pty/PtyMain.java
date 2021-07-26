@@ -4,7 +4,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jediterm.terminal.LoggingTtyConnector;
 import com.jediterm.terminal.TtyConnector;
-import com.jediterm.terminal.ui.AbstractTerminalFrame;
 import com.jediterm.terminal.ui.UIUtil;
 import com.pty4j.PtyProcess;
 import org.apache.log4j.BasicConfigurator;
@@ -21,27 +20,28 @@ import java.util.Map;
 /**
  * @author traff
  */
-public class PtyMain extends AbstractTerminalFrame {
-    @Override
-    public TtyConnector createTtyConnector() {
-        try {
-            Map<String, String> envs = Maps.newHashMap(System.getenv());
-            String[] command;
-
-            if (UIUtil.isWindows) {
-                command = new String[]{"wsl.exe"};
-            } else {
-                command = new String[]{"/bin/bash", "--login"};
-                envs.put("TERM", "xterm");
-            }
-
-            PtyProcess process = PtyProcess.exec(command, envs, null);
-
-            return new LoggingPtyProcessTtyConnector(process, Charset.forName("UTF-8"));
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
-    }
+public class PtyMain {
+//    extends AbstractTerminalFrame
+//    @Override
+//    public TtyConnector createTtyConnector() {
+//        try {
+//            Map<String, String> envs = Maps.newHashMap(System.getenv());
+//            String[] command;
+//
+//            if (UIUtil.isWindows) {
+//                command = new String[]{"wsl.exe"};
+//            } else {
+//                command = new String[]{"/bin/bash", "--login"};
+//                envs.put("TERM", "xterm");
+//            }
+//
+//            PtyProcess process = PtyProcess.exec(command, envs, null);
+//
+//            return new LoggingPtyProcessTtyConnector(process, Charset.forName("UTF-8"));
+//        } catch (Exception e) {
+//            throw new IllegalStateException(e);
+//        }
+//    }
 
     public static void main(final String[] arg) {
         SwingUtilities.invokeLater(new Runnable() {
@@ -100,13 +100,11 @@ public class PtyMain extends AbstractTerminalFrame {
 
         @Override
         public void write(String string) throws IOException {
-            LOG.debug("Writing in OutputStream : " + string);
             super.write(string);
         }
 
         @Override
         public void write(byte[] bytes) throws IOException {
-            LOG.debug("Writing in OutputStream : " + Arrays.toString(bytes) + " " + new String(bytes));
             super.write(bytes);
         }
     }
