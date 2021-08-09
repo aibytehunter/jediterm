@@ -2,6 +2,7 @@ package com.jediterm.util;
 
 import com.jediterm.terminal.CursorShape;
 import com.jediterm.terminal.RequestOrigin;
+import com.jediterm.terminal.TerminalColor;
 import com.jediterm.terminal.TerminalDisplay;
 import com.jediterm.terminal.model.TerminalTextBuffer;
 import com.jediterm.terminal.model.JediTerminal;
@@ -77,6 +78,11 @@ public class BackBufferDisplay implements TerminalDisplay {
   @Override
   public boolean ambiguousCharsAreDoubleWidth() {
     return false;
+  }
+
+  @Override
+  public TerminalColor getWindowBackground() {
+    return null;
   }
 
   public void setSelection(TerminalSelection mySelection) {

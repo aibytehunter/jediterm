@@ -11,6 +11,7 @@ import com.jediterm.terminal.emulator.mouse.MouseMode;
 import com.jediterm.terminal.emulator.mouse.TerminalMouseListener;
 import com.jediterm.terminal.model.*;
 import com.jediterm.terminal.model.hyperlinks.LinkInfo;
+import com.jediterm.terminal.ui.settings.DefaultSettingsProvider;
 import com.jediterm.terminal.ui.settings.SettingsProvider;
 import com.jediterm.terminal.util.CharUtils;
 import com.jediterm.terminal.util.Pair;
@@ -23,13 +24,16 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.font.TextAttribute;
 import java.awt.font.TextHitInfo;
 import java.awt.im.InputMethodRequests;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.text.AttributedCharacterIterator;
+import java.text.AttributedString;
 import java.text.CharacterIterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -148,12 +152,12 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
         sizeTerminalFromComponent();
     }
 
+
     protected void initFont() {
         myNormalFont = createFont();
         myBoldFont = myNormalFont.deriveFont(Font.BOLD);
         myItalicFont = myNormalFont.deriveFont(Font.ITALIC);
         myBoldItalicFont = myNormalFont.deriveFont(Font.BOLD | Font.ITALIC);
-
         establishFontMetrics();
     }
 
@@ -669,6 +673,7 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
         final Graphics2D graphics = img.createGraphics();
         graphics.setFont(myNormalFont);
 
+
         final float lineSpacing = mySettingsProvider.getLineSpacing();
         final FontMetrics fo = graphics.getFontMetrics();
 
@@ -970,6 +975,15 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
         return myWindowTitle;
     }
 
+    @Override
+    public TerminalColor getWindowBackground() {
+        Color windowBackground = getBackground();
+
+        // Return RGB color because we don't have palette information outside of TerminalPanel.
+        return new TerminalColor(windowBackground.getRed(), windowBackground.getGreen(), windowBackground.getBlue());
+    }
+
+
     protected int getInsetX() {
         return 4;
     }
@@ -1209,6 +1223,7 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
 
     private void drawCharacters(int x, int y, TextStyle style, CharBuffer buf, Graphics2D gfx,
                                 boolean includeSpaceBetweenLines) {
+        gfx.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
         int xCoord = x * myCharSize.width + getInsetX();
         int yCoord = y * myCharSize.height + (includeSpaceBetweenLines ? 0 : mySpaceBetweenLines / 2);
 
@@ -1310,15 +1325,15 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
                     getHeight() - yCoord);
 
             gfx.setColor(getStyleForeground(style));
-
+//TODO 写入
             gfx.drawChars(renderingBuffer.getBuf(), buf.getStart() + offset, blockLen, xCoord, baseLine);
-
             drawCharsOffset += blockLen;
             offset += blockLen;
             blockLen = 1;
         }
         gfx.setClip(null);
     }
+
 
     private @NotNull Color getStyleForeground(@NotNull TextStyle style) {
         Color foreground = getPalette().getForeground(myStyleState.getForeground(style.getForegroundForRun()));
@@ -1680,8 +1695,7 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
                 if (mySettingsProvider.scrollToBottomOnTyping() && isCodeThatScrolls(keycode)) {
                     scrollToBottom();
                 }
-            } else if ((e.getModifiersEx() & InputEvent.ALT_DOWN_MASK) != 0 && Character.isDefined(keychar) &&
-                    mySettingsProvider.altSendsEscape()) {
+            } else if (isAltPressedOnly(e) && Character.isDefined(keychar) && mySettingsProvider.altSendsEscape()) {
                 // Cannot use e.getKeyChar() on macOS:
                 //  Option+f produces e.getKeyChar()='ƒ' (402), but 'f' (102) is needed.
                 //  Option+b produces e.getKeyChar()='∫' (8747), but 'b' (98) is needed.
@@ -1699,8 +1713,16 @@ public class TerminalPanel extends JComponent implements TerminalDisplay, Termin
         }
     }
 
+    private static boolean isAltPressedOnly(@NotNull KeyEvent e) {
+        int modifiersEx = e.getModifiersEx();
+        return (modifiersEx & InputEvent.ALT_DOWN_MASK) != 0 &&
+                (modifiersEx & InputEvent.ALT_GRAPH_DOWN_MASK) == 0 &&
+                (modifiersEx & InputEvent.CTRL_DOWN_MASK) == 0 &&
+                (modifiersEx & InputEvent.SHIFT_DOWN_MASK) == 0;
+    }
+
     private void processCharacter(@NotNull KeyEvent e) {
-        if ((e.getModifiersEx() & InputEvent.ALT_DOWN_MASK) != 0 && mySettingsProvider.altSendsEscape()) {
+        if (isAltPressedOnly(e) && mySettingsProvider.altSendsEscape()) {
             return;
         }
         char keyChar = e.getKeyChar();

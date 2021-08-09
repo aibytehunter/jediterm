@@ -1008,6 +1008,12 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
     }
 
     @Override
+    public TerminalColor getWindowBackground() {
+        return myDisplay.getWindowBackground();
+    }
+
+
+    @Override
     public void setMouseFormat(MouseFormat mouseFormat) {
         myMouseFormat = mouseFormat;
     }

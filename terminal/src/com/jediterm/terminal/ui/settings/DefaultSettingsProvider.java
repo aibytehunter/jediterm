@@ -117,18 +117,9 @@ public class DefaultSettingsProvider implements SettingsProvider {
         String fontName;
         if (UIUtil.isWindows) {
             Font localFont;
-            try (InputStream inputStream = DefaultSettingsProvider.class.getResourceAsStream("/YaHeiConsolasHybrid.ttf")) {
+            try (InputStream inputStream = DefaultSettingsProvider.class.getResourceAsStream("/CascadiaMonoPL-Regular-ALL.ttf")) {
                 localFont = Font.createFont(Font.PLAIN, inputStream);
-                localFont = localFont.deriveFont(Font.PLAIN, 17);
-                return localFont;
-            } catch (FontFormatException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            try (InputStream inputStream = DefaultSettingsProvider.class.getResourceAsStream("/JetBrainsMono-Regular.ttf")) {
-                localFont = Font.createFont(Font.PLAIN, inputStream);
-                localFont = localFont.deriveFont(Font.PLAIN, 17);
+                localFont = localFont.deriveFont(Font.PLAIN, 16);
                 return localFont;
             } catch (FontFormatException e) {
                 e.printStackTrace();

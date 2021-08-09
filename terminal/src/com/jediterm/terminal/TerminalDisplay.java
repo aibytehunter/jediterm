@@ -35,8 +35,12 @@ public interface TerminalDisplay {
   void terminalMouseModeSet(MouseMode mode);
 
   TerminalSelection getSelection();
-  
+
   boolean ambiguousCharsAreDoubleWidth();
 
   default void setBracketedPasteMode(boolean enabled) {}
+
+  default TerminalColor getWindowBackground() {
+    return null;
+  }
 }
