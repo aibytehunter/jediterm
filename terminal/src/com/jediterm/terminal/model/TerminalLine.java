@@ -1,7 +1,6 @@
 package com.jediterm.terminal.model;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
 import com.jediterm.terminal.StyledTextConsumer;
 import com.jediterm.terminal.TextStyle;
 import com.jediterm.terminal.util.CharUtils;
@@ -18,14 +17,13 @@ import java.util.stream.Collectors;
 /**
  * @author traff
  */
-public class TerminalLine {
-
+public final class TerminalLine {
   private static final Logger LOG = Logger.getLogger(TerminalLine.class);
 
   private TextEntries myTextEntries = new TextEntries();
   private boolean myWrapped = false;
   private final List<TerminalLineIntervalHighlighting> myCustomHighlightings = new ArrayList<>();
-  private TerminalLine myTypeAheadLine;
+  TerminalLine myTypeAheadLine;
 
   public TerminalLine() {
   }
@@ -38,24 +36,21 @@ public class TerminalLine {
     return new TerminalLine();
   }
 
-  public synchronized String getText() {
-    final StringBuilder sb = new StringBuilder();
-
-    for (TerminalLine.TextEntry textEntry : Lists.newArrayList(myTextEntries)) {
+  public @NotNull String getText() {
+    StringBuilder result = new StringBuilder(myTextEntries.myLength);
+    for (TerminalLine.TextEntry textEntry : myTextEntries) {
       // NUL can only be at the end
       if (textEntry.getText().isNul()) {
         break;
-      } else {
-        sb.append(textEntry.getText());
       }
+      result.append(textEntry.getText());
     }
-
-    return sb.toString();
+    return result.toString();
   }
 
   public @NotNull TerminalLine copy() {
     TerminalLine result = new TerminalLine();
-    for (TextEntry entry : myTextEntries.entries()) {
+    for (TextEntry entry : myTextEntries) {
       result.myTextEntries.add(entry);
     }
     result.myWrapped = myWrapped;
@@ -89,6 +84,10 @@ public class TerminalLine {
     writeCharacters(x, style, str);
   }
 
+  public void insertString(int x, @NotNull CharBuffer str, @NotNull TextStyle style) {
+    insertCharacters(x, style, str);
+  }
+
   private synchronized void writeCharacters(int x, @NotNull TextStyle style, @NotNull CharBuffer characters) {
     int len = myTextEntries.length();
 
@@ -102,6 +101,26 @@ public class TerminalLine {
       len = Math.max(len, x + characters.length());
       myTextEntries = merge(x, characters, style, myTextEntries, len);
     }
+  }
+
+  private synchronized void insertCharacters(int x, @NotNull TextStyle style, @NotNull CharBuffer characters) {
+    int length = myTextEntries.length();
+    if (x > length) {
+      writeCharacters(x, style, characters);
+      return;
+    }
+
+    Pair<char[], TextStyle[]> pair = toBuf(myTextEntries, length + characters.length());
+
+    for (int i = length - 1; i >= x; i--) {
+      pair.first[i + characters.length()] = pair.first[i];
+      pair.second[i + characters.length()] = pair.second[i];
+    }
+    for (int i = 0; i < characters.length(); i++) {
+      pair.first[i + x] = characters.charAt(i);
+      pair.second[i + x] = style;
+    }
+    myTextEntries = collectFromBuffer(pair.first, pair.second);
   }
 
   private static TextEntries merge(int x, @NotNull CharBuffer str, @NotNull TextStyle style, @NotNull TextEntries entries, int lineLength) {
@@ -317,7 +336,7 @@ public class TerminalLine {
   }
 
   public synchronized boolean isNul() {
-    for (TextEntry e : myTextEntries.entries()) {
+    for (TextEntry e : myTextEntries) {
       if (!e.isNul()) {
         return false;
       }
@@ -332,13 +351,14 @@ public class TerminalLine {
 
   @TestOnly
   public List<TextEntry> getEntries() {
-    return myTextEntries.entries();
+    return Collections.unmodifiableList(myTextEntries.entries());
   }
 
   void appendEntry(@NotNull TextEntry entry) {
     myTextEntries.add(entry);
   }
 
+  @SuppressWarnings("unused") // used by IntelliJ
   public synchronized @NotNull TerminalLineIntervalHighlighting addCustomHighlighting(int startOffset, int length, @NotNull TextStyle textStyle) {
     TerminalLineIntervalHighlighting highlighting = new TerminalLineIntervalHighlighting(this, startOffset, length, textStyle) {
       @Override
@@ -360,10 +380,6 @@ public class TerminalLine {
         Joiner.on("|").join(myTextEntries.myTextEntries.stream().map(
             entry -> entry.getText().toString()).collect(Collectors.toList())
         );
-  }
-
-  void setTypeAheadLine(@Nullable TerminalLine typeAheadLine) {
-    myTypeAheadLine = typeAheadLine;
   }
 
   public static class TextEntry {
@@ -416,12 +432,12 @@ public class TerminalLine {
     }
 
     private List<TextEntry> entries() {
-      return Collections.unmodifiableList(myTextEntries);
+      return myTextEntries;
     }
 
     @NotNull
     public Iterator<TextEntry> iterator() {
-      return entries().iterator();
+      return myTextEntries.iterator();
     }
 
     public int length() {

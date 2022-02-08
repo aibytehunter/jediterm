@@ -56,9 +56,9 @@ public abstract class TerminalLineIntervalHighlighting {
   }
 
   public @NotNull TextStyle mergeWith(@NotNull TextStyle style) {
-    TerminalColor foreground = myStyle.getForeground();
+    TerminalColor foreground = myStyle.getPromptBackground();
     if (foreground == null) {
-      foreground = style.getForeground();
+      foreground = style.getPromptBackground();
     }
     TerminalColor background = myStyle.getBackground();
     if (background == null) {

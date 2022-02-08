@@ -73,6 +73,11 @@ public class BasicTerminalExample {
     }
 
     @Override
+    public void resize(@NotNull Dimension termWinSize) {
+      TtyConnector.super.resize(termWinSize);
+    }
+
+    @Override
     public void resize(Dimension termSize, Dimension pixelSize) {
     }
 
@@ -102,6 +107,11 @@ public class BasicTerminalExample {
     @Override
     public int waitFor() {
       return 0;
+    }
+
+    @Override
+    public boolean ready() throws IOException {
+      return false;
     }
   }
 }

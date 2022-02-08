@@ -1,6 +1,7 @@
 package com.jediterm.terminal;
 
-import org.jetbrains.annotations.NotNull;
+import com.jediterm.terminal.util.CharUtils;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 
@@ -9,14 +10,26 @@ import java.io.IOException;
  */
 public class TtyBasedArrayDataStream extends ArrayTerminalDataStream {
   private final TtyConnector myTtyConnector;
+  private final @Nullable Runnable myOnBeforeBlockingWait;
+
+  public TtyBasedArrayDataStream(final TtyConnector ttyConnector, final @Nullable Runnable onBeforeBlockingWait) {
+    super(new char[1024], 0, 0);
+    myTtyConnector = ttyConnector;
+    myOnBeforeBlockingWait = onBeforeBlockingWait;
+  }
 
   public TtyBasedArrayDataStream(final TtyConnector ttyConnector) {
     super(new char[1024], 0, 0);
     myTtyConnector = ttyConnector;
+    myOnBeforeBlockingWait = null;
   }
 
   private void fillBuf() throws IOException {
     myOffset = 0;
+
+    if (!myTtyConnector.ready() && myOnBeforeBlockingWait != null) {
+      myOnBeforeBlockingWait.run();
+    }
     myLength = myTtyConnector.read(myBuf, myOffset, myBuf.length);
 
     if (myLength <= 0) {
@@ -42,11 +55,6 @@ public class TtyBasedArrayDataStream extends ArrayTerminalDataStream {
 
   @Override
   public String toString() {
-    return getDebugText();
-  }
-
-  private @NotNull String getDebugText() {
-    String s = new String(myBuf, myOffset, myLength);
-    return s.replace("\u001b", "ESC").replace("\n", "\\n").replace("\r", "\\r").replace("\u0007", "BEL").replace(" ", "<S>");
+    return CharUtils.toHumanReadableText(new String(myBuf, myOffset, myLength));
   }
 }

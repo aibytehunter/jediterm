@@ -15,12 +15,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Collections;
 
 public class DefaultSettingsProvider implements SettingsProvider {
-
 
     @Override
     public @NotNull TerminalActionPresentation getNewSessionActionPresentation() {
@@ -109,26 +106,13 @@ public class DefaultSettingsProvider implements SettingsProvider {
         return ColorPaletteImpl.XTERM_PALETTE;
     }
 
-    /**
-     * @return
-     */
     @Override
     public Font getTerminalFont() {
         String fontName;
         if (UIUtil.isWindows) {
-            Font localFont;
-            try (InputStream inputStream = DefaultSettingsProvider.class.getResourceAsStream("/CascadiaMonoPL-Regular-ALL.ttf")) {
-                localFont = Font.createFont(Font.PLAIN, inputStream);
-                localFont = localFont.deriveFont(Font.PLAIN, 16);
-                return localFont;
-            } catch (FontFormatException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            fontName = "Monospaced";
+            fontName = "Consolas";
         } else if (UIUtil.isMac) {
-            fontName = "Menlo";
+            fontName = "JetBrains Mono";
         } else {
             fontName = "Monospaced";
         }
@@ -137,7 +121,7 @@ public class DefaultSettingsProvider implements SettingsProvider {
 
     @Override
     public float getTerminalFontSize() {
-        return 14;
+        return 15;
     }
 
 
@@ -148,22 +132,20 @@ public class DefaultSettingsProvider implements SettingsProvider {
 
     @Override
     public TextStyle getDefaultStyle() {
-        return new TextStyle(TerminalColor.rgb(235, 235, 235), TerminalColor.rgb(43, 43, 43));
+       TerminalColor foreground = TerminalColor.rgb(235, 235, 235);
+        TerminalColor background = TerminalColor.rgb(33, 33, 33);
+        return new TextStyle(foreground, background);
     }
 
     @Override
     public TextStyle getSelectionColor() {
-        return new TextStyle(TerminalColor.BLACK, TerminalColor.rgb(255, 255, 255));
-    }
-
-    @Override
-    public TextStyle getFoundSelectionColor() {
-        return new TextStyle(TerminalColor.WHITE, TerminalColor.rgb(222, 150, 50));
+        return new TextStyle(TerminalColor.WHITE, TerminalColor.rgb(82, 109, 165));
     }
 
     @Override
     public TextStyle getFoundPatternColor() {
-        return new TextStyle(TerminalColor.BLACK, TerminalColor.rgb(255, 255, 0));
+        TerminalColor rgb = TerminalColor.rgb(255, 255, 0);
+        return new TextStyle(TerminalColor.BLACK, rgb);
     }
 
     @Override
@@ -176,31 +158,16 @@ public class DefaultSettingsProvider implements SettingsProvider {
         return HyperlinkStyle.HighlightMode.HOVER;
     }
 
-    /**
-     * 是否使用反色选择
-     *
-     * @return
-     */
     @Override
     public boolean useInverseSelectionColor() {
         return true;
     }
 
-    /**
-     * 选择复制
-     *
-     * @return
-     */
     @Override
     public boolean copyOnSelect() {
         return emulateX11CopyPaste();
     }
 
-    /**
-     * 鼠标中键粘贴
-     *
-     * @return
-     */
     @Override
     public boolean pasteOnMiddleMouseClick() {
         return emulateX11CopyPaste();
@@ -218,7 +185,7 @@ public class DefaultSettingsProvider implements SettingsProvider {
 
     @Override
     public int maxRefreshRate() {
-        return 60;
+        return 50;
     }
 
     @Override

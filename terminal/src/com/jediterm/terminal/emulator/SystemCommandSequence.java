@@ -3,6 +3,9 @@ package com.jediterm.terminal.emulator;
 import com.google.common.base.Ascii;
 import com.google.common.collect.Lists;
 import com.jediterm.terminal.TerminalDataStream;
+import com.jediterm.terminal.util.CharUtils;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.List;
@@ -11,65 +14,59 @@ import java.util.List;
  * @author traff
  */
 final class SystemCommandSequence {
+
+  private static final char ST = 0x9c;
+
   private final List<Object> myArgs = Lists.newArrayList();
+  private final StringBuilder mySequence = new StringBuilder();
 
-  private final StringBuilder mySequenceString = new StringBuilder();
-
-  public SystemCommandSequence(TerminalDataStream dataStream) throws IOException {
-    readSystemCommandSequence(dataStream);
-  }
-
-  private void readSystemCommandSequence(TerminalDataStream stream) throws IOException {
-    boolean isNumber = true;
-    int number = 0;
-    StringBuilder string = new StringBuilder();
-
-    while (true) {
-      final char b = stream.getChar();
-      mySequenceString.append(b);
-
-      if (b == ';' || isEnd(b)) {
-        if (isTwoBytesEnd(b)) {
-          string.delete(string.length() - 1, string.length());
+  public SystemCommandSequence(@NotNull TerminalDataStream stream) throws IOException {
+    StringBuilder argBuilder = new StringBuilder();
+    boolean end = false;
+    while (!end) {
+      char ch = stream.getChar();
+      mySequence.append(ch);
+      end = isEnd();
+      if (ch == ';' || end) {
+        if (end && isTwoBytesEnd()) {
+          argBuilder.deleteCharAt(argBuilder.length() - 1);
         }
-        if (isNumber) {
-          myArgs.add(number);
-        }
-        else {
-          myArgs.add(string.toString());
-        }
-        if (isEnd(b)) {
-          break;
-        }
-        isNumber = true;
-        number = 0;
-        string = new StringBuilder();
-      }
-      else if (isNumber) {
-        if ('0' <= b && b <= '9') {
-          number = number * 10 + b - '0';
-        }
-        else {
-          isNumber = false;
-        }
-        string.append(b);
+        myArgs.add(parseArg(argBuilder.toString()));
+        argBuilder.setLength(0);
       }
       else {
-        string.append(b);
+        argBuilder.append(ch);
       }
     }
   }
 
-  private boolean isEnd(char b) {
-    return b == Ascii.BEL || b == 0x9c || isTwoBytesEnd(b);
+  private @NotNull Object parseArg(@NotNull String arg) {
+    if (arg.length() > 0 && Character.isDigit(arg.charAt(arg.length() - 1))) {
+      // check isDigit to reduce amount of expensive NumberFormatException
+      try {
+        return Integer.parseInt(arg);
+      }
+      catch (NumberFormatException ignored) {
+      }
+    }
+    return arg;
   }
 
-  private boolean isTwoBytesEnd(char ch) {
-    int len = mySequenceString.length();
-    return len >= 2 && mySequenceString.charAt(len - 2) == Ascii.ESC && ch == '\\';
+  private boolean isEnd() {
+    int len = mySequence.length();
+    if (len > 0) {
+      char ch = mySequence.charAt(len - 1);
+      return ch == Ascii.BEL || ch == ST || isTwoBytesEnd();
+    }
+    return false;
   }
 
-  public String getStringAt(int i) {
+  private boolean isTwoBytesEnd() {
+    int len = mySequence.length();
+    return len > 1 && mySequence.charAt(len - 2) == Ascii.ESC && mySequence.charAt(len - 1) == '\\';
+  }
+
+  public @Nullable String getStringAt(int i) {
     if (i>=myArgs.size()) {
       return null;
     }
@@ -87,7 +84,26 @@ final class SystemCommandSequence {
     return defaultValue;
   }
 
-  public String getSequenceString() {
-    return mySequenceString.toString();
+  public @NotNull String format(@NotNull String body) {
+    return (char)Ascii.ESC + "]" + body + getTerminator();
+  }
+
+  @Override
+  public String toString() {
+    return CharUtils.toHumanReadableText(mySequence.toString());
+  }
+
+  /**
+   * <a href="https://invisible-island.net/xterm/ctlseqs/ctlseqs.html">
+   * XTerm accepts either BEL or ST for terminating OSC
+   * sequences, and when returning information, uses the same
+   * terminator used in a query. </a>
+   */
+  private @NotNull String getTerminator() {
+    int len = mySequence.length();
+    if (isTwoBytesEnd()) {
+      return mySequence.substring(len - 2);
+    }
+    return mySequence.substring(len - 1);
   }
 }

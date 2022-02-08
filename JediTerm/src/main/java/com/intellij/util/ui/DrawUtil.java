@@ -30,7 +30,6 @@ import com.intellij.util.ReflectionUtil;
 import com.intellij.util.RetinaImage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import sun.swing.SwingUtilities2;
 
 import javax.swing.*;
 import java.awt.*;
@@ -42,7 +41,9 @@ import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Optional;
 
+
 public class DrawUtil {
+    public static final Object AA_TEXT_PROPERTY_KEY = new StringBuffer("AATextInfoPropertyKey");
     protected static final Logger LOG = Logger.getInstance("#com.intellij.util.ui.UIUtil");
     private static final Ref<Boolean> ourRetina = Ref.create(SystemInfo.isMac ? null : false);
 
@@ -208,8 +209,7 @@ public class DrawUtil {
                                           final boolean opaque) {
         if ((SystemInfo.isMac && !isRetina()) || SystemInfo.isLinux) {
             drawAppleDottedLine(g, startX, endX, lineY, bgColor, fgColor, opaque);
-        }
-        else {
+        } else {
             drawBoringDottedLine(g, startX, endX, lineY, bgColor, fgColor, opaque);
         }
     }
@@ -680,6 +680,6 @@ public class DrawUtil {
     }
 
     public static void setupComponentAntialiasing(JComponent component) {
-        component.putClientProperty(SwingUtilities2.AA_TEXT_PROPERTY_KEY, AntialiasingType.getAAHintForSwingComponent());
+        component.putClientProperty(AA_TEXT_PROPERTY_KEY, AntialiasingType.getAAHintForSwingComponent());
     }
 }

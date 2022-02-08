@@ -18,7 +18,7 @@ import static java.awt.event.KeyEvent.*;
 public class TerminalKeyEncoder {
   private static final int ESC = Ascii.ESC;
 
-  private final Map<KeyCodeAndModifier, byte[]> myKeyCodes = new HashMap<KeyCodeAndModifier, byte[]>();
+  private final Map<KeyCodeAndModifier, byte[]> myKeyCodes = new HashMap<>();
 
   private boolean myAltSendsEscape = true;
   private boolean myMetaSendsEscape = false;

@@ -4,6 +4,8 @@ import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 
+import java.io.IOException;
+
 public class JSchExecTtyConnector extends JSchTtyConnector<ChannelExec> {
 
   public JSchExecTtyConnector() {
@@ -34,4 +36,8 @@ public class JSchExecTtyConnector extends JSchTtyConnector<ChannelExec> {
     channel.setPtySize(col, row, wp, hp);
   }
 
+  @Override
+  public boolean ready() throws IOException {
+    return false;
+  }
 }

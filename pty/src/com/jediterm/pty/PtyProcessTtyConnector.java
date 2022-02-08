@@ -4,28 +4,25 @@ import com.jediterm.terminal.ProcessTtyConnector;
 import com.pty4j.PtyProcess;
 import com.pty4j.WinSize;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
 import java.nio.charset.Charset;
+import java.util.List;
 
 /**
  * @author traff
  */
 public class PtyProcessTtyConnector extends ProcessTtyConnector {
-  private PtyProcess myProcess;
+  private final PtyProcess myProcess;
 
-  public PtyProcessTtyConnector(PtyProcess process, Charset charset) {
-    super(process, charset);
-
-    myProcess = process;
+  public PtyProcessTtyConnector(@NotNull PtyProcess process, @NotNull Charset charset) {
+    this(process, charset, null);
   }
 
-  @Override
-  protected void resizeImmediately() {
-    if (getPendingTermSize() != null && getPendingPixelSize() != null) {
-      myProcess.setWinSize(
-          new WinSize(getPendingTermSize().width, getPendingTermSize().height, getPendingPixelSize().width, getPendingPixelSize().height));
-    }
+  public PtyProcessTtyConnector(@NotNull PtyProcess process, @NotNull Charset charset, @Nullable List<String> commandLine) {
+    super(process, charset, commandLine);
+    myProcess = process;
   }
 
   @Override

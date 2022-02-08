@@ -1,10 +1,13 @@
 package com.jediterm.ui;
 
+import com.jediterm.app.JediTerm;
 import com.jediterm.terminal.RequestOrigin;
 import com.jediterm.terminal.TtyConnector;
 import com.jediterm.terminal.debug.BufferPanel;
 import com.jediterm.terminal.model.SelectionUtil;
-import com.jediterm.terminal.ui.*;
+import com.jediterm.terminal.ui.JediTermWidget;
+import com.jediterm.terminal.ui.TerminalPanelListener;
+import com.jediterm.terminal.ui.TerminalWidget;
 import com.jediterm.terminal.ui.settings.DefaultTabbedSettingsProvider;
 import com.jediterm.terminal.ui.settings.TabbedSettingsProvider;
 import com.jediterm.terminal.util.Pair;
@@ -129,6 +132,9 @@ public abstract class AbstractTerminalFrame {
 
     public JediTermWidget openSession(TerminalWidget terminal, TtyConnector ttyConnector) {
         JediTermWidget session = terminal.createTerminalSession(ttyConnector);
+        if (ttyConnector instanceof JediTerm.LoggingPtyProcessTtyConnector) {
+            ((JediTerm.LoggingPtyProcessTtyConnector) ttyConnector).setWidget(session);
+        }
         session.start();
         return session;
     }
@@ -136,16 +142,7 @@ public abstract class AbstractTerminalFrame {
     public abstract TtyConnector createTtyConnector();
 
     protected AbstractTerminalFrame() {
-        System.setProperty("prism.lcdtext", "false");
-        System.setProperty("prism.text", "t2k");
-
         AbstractTabbedTerminalWidget<? extends JediTermWidget> tabbedTerminalWidget = createTabbedTerminalWidget();
-        tabbedTerminalWidget.addTabListener(terminal -> {
-            AbstractTabs<?> tabs = tabbedTerminalWidget.getTerminalTabs();
-            if (tabs == null || tabs.getTabCount() == 0) {
-                System.exit(0);
-            }
-        });
         myTerminal = tabbedTerminalWidget;
 
         final JFrame frame = new JFrame("JediTerm");
@@ -157,8 +154,8 @@ public abstract class AbstractTerminalFrame {
             }
         });
 
-//    final JMenuBar mb = getJMenuBar();
-//    frame.setJMenuBar(mb);
+        final JMenuBar mb = getJMenuBar();
+        frame.setJMenuBar(mb);
         sizeFrameForTerm(frame);
         frame.getContentPane().add("Center", myTerminal.getComponent());
 
@@ -168,17 +165,26 @@ public abstract class AbstractTerminalFrame {
 
         frame.setResizable(true);
 
+        tabbedTerminalWidget.addTabListener(new AbstractTabbedTerminalWidget.TabListener() {
+            @Override
+            public void tabClosed(JediTermWidget terminal) {
+                AbstractTabs<?> tabs = tabbedTerminalWidget.getTerminalTabs();
+                if (tabs == null || tabs.getTabCount() == 0) {
+                    System.exit(0);
+                }
+            }
+
+            @Override
+            public void onSelectedTabChanged(@NotNull JediTermWidget terminal) {
+                frame.setTitle(terminal.getSessionName());
+            }
+        });
         myTerminal.setTerminalPanelListener(new TerminalPanelListener() {
             public void onPanelResize(@NotNull RequestOrigin origin) {
                 if (origin == RequestOrigin.Remote) {
                     sizeFrameForTerm(frame);
                 }
                 frame.pack();
-            }
-
-            @Override
-            public void onSessionChanged(final TerminalSession currentSession) {
-                frame.setTitle(currentSession.getSessionName());
             }
 
             @Override

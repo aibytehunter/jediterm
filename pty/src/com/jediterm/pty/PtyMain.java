@@ -77,35 +77,35 @@ public class PtyMain {
     }
 
 
-    public static class LoggingPtyProcessTtyConnector extends PtyProcessTtyConnector implements LoggingTtyConnector {
-        private List<char[]> myDataChunks = Lists.newArrayList();
-
-        public LoggingPtyProcessTtyConnector(PtyProcess process, Charset charset) {
-            super(process, charset);
-        }
-
-        @Override
-        public int read(char[] buf, int offset, int length) throws IOException {
-            int len = super.read(buf, offset, length);
-            if (len > 0) {
-                char[] arr = Arrays.copyOfRange(buf, offset, len);
-                myDataChunks.add(arr);
-            }
-            return len;
-        }
-
-        public List<char[]> getChunks() {
-            return Lists.newArrayList(myDataChunks);
-        }
-
-        @Override
-        public void write(String string) throws IOException {
-            super.write(string);
-        }
-
-        @Override
-        public void write(byte[] bytes) throws IOException {
-            super.write(bytes);
-        }
-    }
+//    public static class LoggingPtyProcessTtyConnector extends PtyProcessTtyConnector implements LoggingTtyConnector {
+//        private List<char[]> myDataChunks = Lists.newArrayList();
+//
+//        public LoggingPtyProcessTtyConnector(PtyProcess process, Charset charset) {
+//            super(process, charset);
+//        }
+//
+//        @Override
+//        public int read(char[] buf, int offset, int length) throws IOException {
+//            int len = super.read(buf, offset, length);
+//            if (len > 0) {
+//                char[] arr = Arrays.copyOfRange(buf, offset, len);
+//                myDataChunks.add(arr);
+//            }
+//            return len;
+//        }
+//
+//        public List<char[]> getChunks() {
+//            return Lists.newArrayList(myDataChunks);
+//        }
+//
+//        @Override
+//        public void write(String string) throws IOException {
+//            super.write(string);
+//        }
+//
+//        @Override
+//        public void write(byte[] bytes) throws IOException {
+//            super.write(bytes);
+//        }
+//    }
 }

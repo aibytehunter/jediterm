@@ -10,6 +10,7 @@ import com.intellij.util.EncodingEnvironmentUtil
 import com.jediterm.pty.PtyProcessTtyConnector
 import com.jediterm.terminal.LoggingTtyConnector
 import com.jediterm.terminal.TtyConnector
+import com.jediterm.terminal.ui.JediTermWidget
 import com.jediterm.terminal.ui.TerminalWidget
 import com.jediterm.terminal.ui.UIUtil
 import com.jediterm.terminal.ui.settings.DefaultTabbedSettingsProvider
@@ -68,7 +69,11 @@ class JediTerm : AbstractTerminalFrame(), Disposable {
     }
 
     override fun createTabbedTerminalWidget(): JediTabbedTerminalWidget {
-        return object : JediTabbedTerminalWidget(DefaultTabbedSettingsProvider(), Function<Pair<TerminalWidget, String>, JediTerminalWidget> { pair -> openSession(pair?.first) as JediTerminalWidget }, this) {
+        return object : JediTabbedTerminalWidget(
+            DefaultTabbedSettingsProvider(),
+            Function<Pair<TerminalWidget, String>, JediTerminalWidget> { pair -> openSession(pair?.first) as JediTerminalWidget },
+            this
+        ) {
             override fun createInnerTerminalWidget(): JediTerminalWidget {
                 return createTerminalWidget(settingsProvider)
             }
@@ -88,19 +93,19 @@ class JediTerm : AbstractTerminalFrame(), Disposable {
             if (UIUtil.isWindows) {
                 command = arrayOf("wsl.exe")
             } else {
-                command = arrayOf("/bin/bash", "--login")
+                command = arrayOf("/bin/zsh", "--login")
             }
             envs.put("TERM", "xterm")
 //            envs["TERM"] = "xterm-128color";
 //            envs.put("TERM", "xterm")
 
             val process = PtyProcessBuilder()
-                    .setCommand(command)
-                    .setEnvironment(envs)
-                    .setConsole(false)
-                    .start();
+                .setCommand(command)
+                .setEnvironment(envs)
+                .setConsole(false)
+                .start();
 
-            return LoggingPtyProcessTtyConnector(process, charset)
+            return LoggingPtyProcessTtyConnector(process, charset, command.toList())
         } catch (e: Exception) {
             throw IllegalStateException(e)
         }
@@ -113,15 +118,39 @@ class JediTerm : AbstractTerminalFrame(), Disposable {
         return widget
     }
 
-    class LoggingPtyProcessTtyConnector(process: PtyProcess, charset: Charset) : PtyProcessTtyConnector(process, charset), LoggingTtyConnector {
-        private val myDataChunks = Lists.newArrayList<CharArray>()
+    class LoggingPtyProcessTtyConnector(
+        process: PtyProcess,
+        charset: Charset,
+        command: List<String>
+    ) :
+        PtyProcessTtyConnector(process, charset, command), LoggingTtyConnector {
+        private val MAX_LOG_SIZE = 200
+
+        private val myDataChunks = Lists.newLinkedList<CharArray>()
+        private val myStates = Lists.newLinkedList<LoggingTtyConnector.TerminalState>()
+        private var myWidget: JediTermWidget? = null
+        private var logStart = 0
 
         @Throws(IOException::class)
         override fun read(buf: CharArray, offset: Int, length: Int): Int {
             val len = super.read(buf, offset, length)
             if (len > 0) {
-                val arr = Arrays.copyOfRange(buf, offset, len)
+                val arr = buf.copyOfRange(offset, len)
                 myDataChunks.add(arr)
+
+                val terminalTextBuffer = myWidget!!.terminalTextBuffer
+                val terminalState = LoggingTtyConnector.TerminalState(
+                    terminalTextBuffer.screenLines,
+                    terminalTextBuffer.styleLines,
+                    terminalTextBuffer.historyBuffer.lines
+                )
+                myStates.add(terminalState)
+
+                if (myDataChunks.size > MAX_LOG_SIZE) {
+                    myDataChunks.removeFirst()
+                    myStates.removeFirst()
+                    logStart++
+                }
             }
             return len
         }
@@ -130,16 +159,26 @@ class JediTerm : AbstractTerminalFrame(), Disposable {
             return Lists.newArrayList(myDataChunks)
         }
 
+        override fun getStates(): List<LoggingTtyConnector.TerminalState> {
+            return Lists.newArrayList(myStates)
+        }
+
+        override fun getLogStart() = logStart
+
         @Throws(IOException::class)
         override fun write(string: String) {
-            AbstractTerminalFrame.LOG.debug("Writing in OutputStream : " + string)
+            LOG.debug("Writing in OutputStream : $string")
             super.write(string)
         }
 
         @Throws(IOException::class)
         override fun write(bytes: ByteArray) {
-            AbstractTerminalFrame.LOG.debug("Writing in OutputStream : " + Arrays.toString(bytes) + " " + String(bytes))
+            LOG.debug("Writing in OutputStream : " + bytes.contentToString() + " " + String(bytes))
             super.write(bytes)
+        }
+
+        fun setWidget(widget: JediTermWidget) {
+            myWidget = widget
         }
     }
 

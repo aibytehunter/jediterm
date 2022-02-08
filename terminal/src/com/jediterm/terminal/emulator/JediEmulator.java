@@ -127,12 +127,19 @@ public class JediEmulator extends DataStreamIteratingEmulator {
       case 'O':
         terminal.singleShiftSelect(3); //Single Shift Select of G3 Character Set (SS3). This affects next character only.
         break;
+      case 'P': // Device Control String (DCS)
+        SystemCommandSequence command = new SystemCommandSequence(myDataStream);
+
+        if (!deviceControlString(command)) {
+          LOG.error("Error processing DCS: ESCP" + command);
+        }
+        break;
       case ']': // Operating System Command (OSC)
         // xterm uses it to set parameters like windows title
-        final SystemCommandSequence command = new SystemCommandSequence(myDataStream);
+        command = new SystemCommandSequence(myDataStream);
 
         if (!operatingSystemCommand(command)) {
-          LOG.error("Error processing OSC " + command.getSequenceString());
+          LOG.error("Error processing OSC: ESC]" + command);
         }
         break;
       case '6':
@@ -192,6 +199,10 @@ public class JediEmulator extends DataStreamIteratingEmulator {
     }
   }
 
+  private boolean deviceControlString(SystemCommandSequence args) {
+    return false;
+  }
+
   private boolean operatingSystemCommand(SystemCommandSequence args) {
     int ps = args.getIntAt(0, -1);
 
@@ -206,6 +217,10 @@ public class JediEmulator extends DataStreamIteratingEmulator {
           return true;
         }
         break;
+      case 7:
+        // Support for OSC 7 is pending
+        // "return true" to avoid logging errors about unhandled sequences;
+        return true;
       case 8: // Hyperlink https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda
         String uri = args.getStringAt(2);
         if (uri != null) {
@@ -218,16 +233,50 @@ public class JediEmulator extends DataStreamIteratingEmulator {
           return true;
         }
         break;
-      case 11: // Background http://www.xfree86.org/4.5.0/ctlseqs.html
-        if ("?".equals(args.getStringAt(1))) { // Query
-          TerminalColor background = myTerminal.getWindowBackground();
-          String str = "\033]11;rgb:" + background.toHexString16() + "\007";
-          LOG.debug("Responding to OSC 11 query : " + str);
-          myTerminal.deviceStatusReport(str);
-        }
-        break;
+      case 10:
+      case 11:
+        return processColorQuery(args);
     }
     return false;
+  }
+
+
+  /**
+   * <a href="http://www.xfree86.org/4.8.0/ctlseqs.html">
+   * If a "?" is given rather than a name or RGB specification, xterm replies with a control sequence of
+   * the same form which can be used to set the corresponding dynamic color.
+   * </a>
+   */
+  private boolean processColorQuery(@NotNull SystemCommandSequence args) {
+    if (!"?".equals(args.getStringAt(1))) {
+      return false;
+    }
+    int ps = args.getIntAt(0, -1);
+    TerminalColor color;
+    if (ps == 10) {
+      color = myTerminal.getWindowForeground();
+    }
+    else if (ps == 11) {
+      color = myTerminal.getWindowBackground();
+    }
+    else {
+      return false;
+    }
+    if (color != null) {
+      String str = args.format(ps + ";" + formatXParseColor(color));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Responding to OSC " + ps + " query: " + str);
+      }
+      myTerminal.deviceStatusReport(str);
+    }
+    return true;
+  }
+
+  /**
+   * Returns <a href="https://linux.die.net/man/3/xparsecolor">XParseColor</a> representation of TerminalColor
+   */
+  private static @NotNull String formatXParseColor(TerminalColor color) {
+    return "rgb:" + color.toHexString16();
   }
 
   private void processTwoCharSequence(char ch, Terminal terminal) throws IOException {
@@ -444,6 +493,36 @@ public class JediEmulator extends DataStreamIteratingEmulator {
         }
         myTerminal.resize(new Dimension(width, height), RequestOrigin.Remote);
         return true;
+      case 22:
+        return csi22(args);
+      case 23:
+        return csi23(args);
+      default:
+        return false;
+    }
+  }
+
+  private boolean csi22(ControlSequence args) { // TODO: support icon title
+    switch (args.getArg(1, -1)) {
+      case 0: // Save xterm icon and window title on stack.
+      case 2: // Save xterm window title on stack.
+        myTerminal.saveWindowTitleOnStack();
+        return true;
+      case 1: // Save xterm icon title on stack.
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  private boolean csi23(ControlSequence args) { // TODO: support icon title
+    switch (args.getArg(1, -1)) {
+      case 0: // Restore xterm icon and window title on stack.
+      case 2: // Restore xterm window title on stack.
+        myTerminal.restoreWindowTitleFromStack();
+        return true;
+      case 1: // Restore xterm icon title on stack.
+        return true;
       default:
         return false;
     }
@@ -588,6 +667,8 @@ public class JediEmulator extends DataStreamIteratingEmulator {
           return true;
         case 20:
           setModeEnabled(TerminalMode.AutoNewLine, enabled);
+          return true;
+        case 25:
           return true;
         default:
           return false;
