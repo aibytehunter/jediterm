@@ -15,6 +15,8 @@ public interface UserSettingsProvider {
 
   float getTerminalFontSize();
 
+  TextStyle getFoundSelectionColor();
+
   /**
    * @return vertical scaling factor
    */

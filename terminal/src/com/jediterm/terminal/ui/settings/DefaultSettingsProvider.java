@@ -32,6 +32,11 @@ public class DefaultSettingsProvider implements SettingsProvider {
     }
 
     @Override
+    public TextStyle getFoundSelectionColor() {
+        return new TextStyle(TerminalColor.WHITE, TerminalColor.rgb(222, 150, 50));
+    }
+
+    @Override
     public @NotNull TerminalActionPresentation getCopyActionPresentation() {
         KeyStroke keyStroke = UIUtil.isMac
                 ? KeyStroke.getKeyStroke(KeyEvent.VK_C, InputEvent.META_DOWN_MASK)

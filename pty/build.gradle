@@ -1,5 +1,6 @@
-apply plugin: 'java'
-apply plugin: 'application'
+import java.text.SimpleDateFormat
+
+apply plugin: 'java-library'
 apply plugin: 'maven-publish'
 
 
@@ -12,50 +13,38 @@ repositories {
 }
 
 dependencies {
-    compile project(':terminal')
+    api project(':terminal')
 
-    compile 'log4j:log4j:1.2.17'
-    compile 'org.jetbrains:annotations:13.0'
-    compile 'com.google.guava:guava:25.1-jre'
+    implementation 'org.slf4j:slf4j-api:1.7.32'
+    implementation 'org.jetbrains:annotations:20.1.0'
 
-    compile 'org.jetbrains.pty4j:pty4j:0.11.3'
+    api 'org.jetbrains.pty4j:pty4j:0.12.7'
 
-    testCompile 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.13.2'
 }
 
 archivesBaseName = "jediterm-pty"
 
-mainClassName = 'com.jediterm.pty.PtyMain'
-
-
 group 'org.jetbrains.jediterm'
 version rootProject.ext.projectVersion
 
-
 task mainJar(type: Jar) {
-    baseName = "jediterm-pty"
-
-    manifest {
-        attributes 'Main-Class': mainClassName
-    }
+    evaluationDependsOn(':terminal')
     from sourceSets.main.output
-
-    from fileTree(dir: '../.gradleBuild/terminal/classes/java/main') // find a better way to include classes into jar
-}
-
-jar {
-    baseName = "jediterm-pty"
-
+    from project(':terminal').sourceSets.main.output
     manifest {
-        attributes 'Main-Class': mainClassName
+        attributes(
+                'Build-Timestamp': new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(new Date()),
+                'Created-By': "Gradle ${gradle.gradleVersion}",
+                'Build-Jdk': "${System.properties['java.runtime.version']}",
+                'Build-OS': "${System.properties['os.name']} ${System.properties['os.arch']} ${System.properties['os.version']}"
+        )
     }
-    from sourceSets.main.output
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {
     evaluationDependsOn(':terminal')
-    baseName "jediterm-pty"
-    classifier "sources"
+    archiveClassifier = 'sources'
     from sourceSets.main.allSource
     from project(':terminal').sourceSets.main.allSource
 }

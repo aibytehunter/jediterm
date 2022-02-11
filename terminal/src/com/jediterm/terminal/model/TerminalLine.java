@@ -1,14 +1,14 @@
 package com.jediterm.terminal.model;
 
-import com.google.common.base.Joiner;
 import com.jediterm.terminal.StyledTextConsumer;
 import com.jediterm.terminal.TextStyle;
 import com.jediterm.terminal.util.CharUtils;
 import com.jediterm.terminal.util.Pair;
-import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.TestOnly;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
  * @author traff
  */
 public final class TerminalLine {
-  private static final Logger LOG = Logger.getLogger(TerminalLine.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TerminalLine.class);
 
   private TextEntries myTextEntries = new TextEntries();
   private boolean myWrapped = false;
@@ -38,7 +38,7 @@ public final class TerminalLine {
 
   public @NotNull String getText() {
     StringBuilder result = new StringBuilder(myTextEntries.myLength);
-    for (TerminalLine.TextEntry textEntry : myTextEntries) {
+    for (TextEntry textEntry : myTextEntries) {
       // NUL can only be at the end
       if (textEntry.getText().isNul()) {
         break;
@@ -377,9 +377,9 @@ public final class TerminalLine {
     return myTextEntries.length() + " chars, " +
         (myWrapped ? "wrapped, " : "") +
         myTextEntries.myTextEntries.size() + " entries: " +
-        Joiner.on("|").join(myTextEntries.myTextEntries.stream().map(
-            entry -> entry.getText().toString()).collect(Collectors.toList())
-        );
+        myTextEntries.myTextEntries.stream()
+          .map(entry -> entry.getText().toString())
+          .collect(Collectors.joining("|"));
   }
 
   public static class TextEntry {

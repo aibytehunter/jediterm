@@ -1,14 +1,12 @@
 package com.jediterm.app
 
-import com.google.common.collect.ForwardingMap
-import com.google.common.collect.Lists
-import com.google.common.collect.Maps
 import com.intellij.execution.filters.UrlFilter
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Pair
 import com.intellij.util.EncodingEnvironmentUtil
 import com.jediterm.pty.PtyProcessTtyConnector
 import com.jediterm.terminal.LoggingTtyConnector
+import com.jediterm.terminal.LoggingTtyConnector.TerminalState
 import com.jediterm.terminal.TtyConnector
 import com.jediterm.terminal.ui.JediTermWidget
 import com.jediterm.terminal.ui.TerminalWidget
@@ -18,49 +16,24 @@ import com.jediterm.terminal.ui.settings.TabbedSettingsProvider
 import com.jediterm.ui.AbstractTerminalFrame
 import com.pty4j.PtyProcess
 import com.pty4j.PtyProcessBuilder
-import org.apache.log4j.BasicConfigurator
-import org.apache.log4j.Level
-import org.apache.log4j.Logger
-import java.awt.KeyboardFocusManager
 import java.io.IOException
 import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 import java.util.*
 import java.util.function.Function
-
-/**
- * Created by traff on 22/08/16.
- */
-
+import java.util.logging.Level
+import java.util.logging.Logger
+import javax.swing.SwingUtilities
 
 object JediTermMain {
     @JvmStatic
     fun main(arg: Array<String>) {
-        BasicConfigurator.configure()
-        Logger.getRootLogger().level = Level.INFO
+        Logger.getLogger("").level = Level.INFO
 
-//        initLoggingTracing()
-
-        JediTerm()
-    }
-}
-
-fun initLoggingTracing() {
-    val mrfoField = KeyboardFocusManager::class.java!!.getDeclaredField("mostRecentFocusOwners")
-    mrfoField.setAccessible(true)
-
-    val delegate = mrfoField.get(null) as Map<Any, Any>
-
-    val mrfo = object : ForwardingMap<Any, Any>() {
-        override fun put(key: Any?, value: Any?): Any? {
-            Throwable().printStackTrace()
-            return super.put(key, value)
-        }
-
-        override fun delegate(): Map<Any, Any> {
-            return delegate
+        SwingUtilities.invokeLater {
+            JediTerm()
         }
     }
-    mrfoField.set(null, mrfo)
 }
 
 class JediTerm : AbstractTerminalFrame(), Disposable {
@@ -82,28 +55,25 @@ class JediTerm : AbstractTerminalFrame(), Disposable {
 
     override fun createTtyConnector(): TtyConnector {
         try {
-
-            val charset = Charset.forName("UTF-8")
-
-            val envs = Maps.newHashMap(System.getenv())
+            val charset = StandardCharsets.UTF_8
+            val envs = HashMap(System.getenv())
             EncodingEnvironmentUtil.setLocaleEnvironmentIfMac(envs, charset)
-
-            val command: Array<String>
-
-            if (UIUtil.isWindows) {
-                command = arrayOf("wsl.exe")
-            } else {
-                command = arrayOf("/bin/zsh", "--login")
+            val command: Array<String> = if (UIUtil.isWindows) {
+                arrayOf("powershell.exe")
             }
-            envs.put("TERM", "xterm")
-//            envs["TERM"] = "xterm-128color";
-//            envs.put("TERM", "xterm")
+            else {
+                envs["TERM"] = "xterm-256color"
+                val shell = envs["SHELL"] ?: "/bin/bash"
+                if (UIUtil.isMac) arrayOf(shell, "--login") else arrayOf(shell)
+            }
 
+            LOG.info("Starting ${command.joinToString()}")
             val process = PtyProcessBuilder()
                 .setCommand(command)
                 .setEnvironment(envs)
                 .setConsole(false)
-                .start();
+                .setUseWinConPty(true)
+                .start()
 
             return LoggingPtyProcessTtyConnector(process, charset, command.toList())
         } catch (e: Exception) {
@@ -126,8 +96,8 @@ class JediTerm : AbstractTerminalFrame(), Disposable {
         PtyProcessTtyConnector(process, charset, command), LoggingTtyConnector {
         private val MAX_LOG_SIZE = 200
 
-        private val myDataChunks = Lists.newLinkedList<CharArray>()
-        private val myStates = Lists.newLinkedList<LoggingTtyConnector.TerminalState>()
+        private val myDataChunks = LinkedList<CharArray>()
+        private val myStates = LinkedList<TerminalState>()
         private var myWidget: JediTermWidget? = null
         private var logStart = 0
 
@@ -139,7 +109,7 @@ class JediTerm : AbstractTerminalFrame(), Disposable {
                 myDataChunks.add(arr)
 
                 val terminalTextBuffer = myWidget!!.terminalTextBuffer
-                val terminalState = LoggingTtyConnector.TerminalState(
+                val terminalState = TerminalState(
                     terminalTextBuffer.screenLines,
                     terminalTextBuffer.styleLines,
                     terminalTextBuffer.historyBuffer.lines
@@ -156,11 +126,11 @@ class JediTerm : AbstractTerminalFrame(), Disposable {
         }
 
         override fun getChunks(): List<CharArray> {
-            return Lists.newArrayList(myDataChunks)
+            return ArrayList(myDataChunks)
         }
 
-        override fun getStates(): List<LoggingTtyConnector.TerminalState> {
-            return Lists.newArrayList(myStates)
+        override fun getStates(): List<TerminalState> {
+            return ArrayList(myStates)
         }
 
         override fun getLogStart() = logStart
@@ -181,5 +151,4 @@ class JediTerm : AbstractTerminalFrame(), Disposable {
             myWidget = widget
         }
     }
-
 }

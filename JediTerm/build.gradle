@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.2.51'
+    ext.kotlin_version = '1.5.10'
     repositories {
         mavenCentral()
     }
@@ -9,7 +9,6 @@ buildscript {
 }
 
 plugins {
-    id "edu.sc.seis.macAppBundle" version "2.2.1"
     id 'edu.sc.seis.launch4j' version '2.4.4'
 }
 
@@ -21,7 +20,9 @@ apply plugin: 'kotlin'
 repositories {
     flatDir dirs: ['libs', '../pty/libs']
     mavenCentral()
-    jcenter()
+    maven {
+        url "https://packages.jetbrains.team/maven/p/ij/intellij-dependencies"
+    }
 }
 
 sourceSets {
@@ -30,31 +31,20 @@ sourceSets {
 }
 
 dependencies {
-    compile project(':pty')
-
-    compile ":eawtstub:"
-
-    testCompile 'junit:junit:4.12'
-
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    compile "org.jetbrains:annotations:13.0"
-    compile 'net.java.dev.jna:jna:4.5.0'
-    compile 'net.java.dev.jna:jna-platform:4.5.0'
-    compile ":trove4j:"
-    compile ":OfficeLnFs:"
-    compile 'com.bulenkov:darcula:2018.2'
+    implementation project(':pty')
+    implementation ":eawtstub:"
+    implementation 'org.slf4j:slf4j-api:1.7.32'
+    testImplementation 'junit:junit:4.12'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation 'org.slf4j:slf4j-jdk14:1.7.32'
+    implementation "org.jetbrains:annotations:13.0"
+    implementation 'net.java.dev.jna:jna:4.5.0'
+    implementation 'net.java.dev.jna:jna-platform:4.5.0'
+    implementation ":trove4j:"
 }
 
 mainClassName = "com.jediterm.app.JediTermMain"
 
-
-macAppBundle {
-    mainClassName = "com.jediterm.app.JediTermMain"
-    icon = "img/JediTerm.icns"
-    bundleJRE = true
-    javaProperties.put("apple.laf.useScreenMenuBar", "true")
-    bundleExtras.put('NSHighResolutionCapable', true)
-}
 
 launch4j {
     mainClassName = "com.jediterm.app.JediTermMain"

@@ -1,7 +1,5 @@
 package com.jediterm.terminal.model;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.jediterm.terminal.RequestOrigin;
 import com.jediterm.terminal.StyledTextConsumer;
 import com.jediterm.terminal.StyledTextConsumerAdapter;
@@ -10,11 +8,13 @@ import com.jediterm.terminal.model.TerminalLine.TextEntry;
 import com.jediterm.terminal.model.hyperlinks.TextProcessing;
 import com.jediterm.terminal.util.CharUtils;
 import com.jediterm.terminal.util.Pair;
-import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.*;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -30,7 +30,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * <p/>
  */
 public class TerminalTextBuffer {
-  private static final Logger LOG = Logger.getLogger(TerminalTextBuffer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TerminalTextBuffer.class);
 
   @NotNull
   private final StyleState myStyleState;
@@ -241,7 +241,7 @@ public class TerminalTextBuffer {
   }
 
   public void addLine(@NotNull final TerminalLine line) {
-    myScreenBuffer.addLines(Lists.newArrayList(line));
+    myScreenBuffer.addLines(List.of(line));
 
     fireModelChangeEvent();
   }
@@ -269,7 +269,7 @@ public class TerminalTextBuffer {
   }
 
   public String getStyleLines() {
-    final Map<Integer, Integer> hashMap = Maps.newHashMap();
+    final Map<Integer, Integer> hashMap = new HashMap<>();
     myLock.lock();
     try {
       final StringBuilder sb = new StringBuilder();

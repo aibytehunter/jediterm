@@ -15,15 +15,12 @@
  */
 package com.intellij.util.ui;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
-import com.google.common.collect.Maps;
+import com.intellij.openapi.Suppliers;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.ui.GraphicsConfig;
 import com.intellij.openapi.util.Ref;
 import com.intellij.openapi.util.SystemInfo;
 import com.intellij.openapi.util.registry.Registry;
-import com.intellij.ui.AntialiasingType;
 import com.intellij.util.Consumer;
 import com.intellij.util.JBHiDPIScaledImage;
 import com.intellij.util.ReflectionUtil;
@@ -38,12 +35,12 @@ import java.awt.image.BufferedImageOp;
 import java.awt.image.ImageObserver;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-
+import java.util.function.Supplier;
 
 public class DrawUtil {
-    public static final Object AA_TEXT_PROPERTY_KEY = new StringBuffer("AATextInfoPropertyKey");
     protected static final Logger LOG = Logger.getInstance("#com.intellij.util.ui.UIUtil");
     private static final Ref<Boolean> ourRetina = Ref.create(SystemInfo.isMac ? null : false);
 
@@ -209,7 +206,8 @@ public class DrawUtil {
                                           final boolean opaque) {
         if ((SystemInfo.isMac && !isRetina()) || SystemInfo.isLinux) {
             drawAppleDottedLine(g, startX, endX, lineY, bgColor, fgColor, opaque);
-        } else {
+        }
+        else {
             drawBoringDottedLine(g, startX, endX, lineY, bgColor, fgColor, opaque);
         }
     }
@@ -544,7 +542,7 @@ public class DrawUtil {
      */
     private final static class DetectRetinaKit {
 
-        private final static Map<GraphicsDevice, Boolean> devicesToRetinaSupportCacheMap = Maps.newHashMap();
+        private final static Map<GraphicsDevice, Boolean> devicesToRetinaSupportCacheMap = new HashMap<>();
 
         /**
          * The best way to understand whether we are on a retina device is [NSScreen backingScaleFactor]
@@ -677,9 +675,5 @@ public class DrawUtil {
      */
     public static void setupComposite(@NotNull Graphics2D g) {
         g.setComposite(X_RENDER_ACTIVE.get() ? AlphaComposite.SrcOver : AlphaComposite.Src);
-    }
-
-    public static void setupComponentAntialiasing(JComponent component) {
-        component.putClientProperty(AA_TEXT_PROPERTY_KEY, AntialiasingType.getAAHintForSwingComponent());
     }
 }

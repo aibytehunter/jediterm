@@ -5,27 +5,17 @@ sourceSets {
     main.java.srcDirs 'src'
 }
 
-//编译groovy代码时采用 UTF-8
-tasks.withType(GroovyCompile) {
-    groovyOptions.encoding = "MacRoman"
-}
-
-//编译JAVA文件时采用UTF-8
-tasks.withType(JavaCompile) {
-    options.encoding = "UTF-8"
-}
-
 dependencies {
-    compile project(':terminal')
 
-    compile 'log4j:log4j:1.2.14'
-    compile 'org.jetbrains:annotations:13.0'
-    compile 'com.google.guava:guava:25.1-jre'
+    implementation project(':terminal')
+    implementation 'org.slf4j:slf4j-api:1.7.32'
+    implementation 'org.jetbrains:annotations:13.0'
+    implementation 'com.google.guava:guava:25.1-jre'
+    implementation 'com.jcraft:jsch:0.1.54'
 
-    compile 'com.jcraft:jsch:0.1.54'
-    compile 'com.jcraft:jzlib:1.1.3'
+    implementation 'com.jcraft:jzlib:1.1.3'
 
-    testCompile 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.12'
 }
 
 mainClassName = 'com.jediterm.ssh.SshMain'

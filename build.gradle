@@ -1,45 +1,26 @@
-buildscript {
-    repositories {
-        jcenter()
-    }
-    dependencies {
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4'
-    }
-}
-//编译groovy代码时采用 UTF-8
-tasks.withType(GroovyCompile) {
-    groovyOptions.encoding = "MacRoman"
-}
-
-//编译JAVA文件时采用UTF-8
-tasks.withType(JavaCompile) {
-    options.encoding = "UTF-8"
-}
 apply plugin: 'java'
 
 def projectVersion = new File(rootProject.projectDir, 'VERSION').text
 
 ext.projectVersion = projectVersion
 
-if (System.getenv('BINTRAY_USER') == null) {
+if (System.getenv('INTELLIJ_DEPENDENCIES_BOT') == null) {
     ext.projectVersion = ext.projectVersion + '-SNAPSHOT'
 }
 
 
 allprojects {
     version = projectVersion
-
     buildDir = new File(rootProject.projectDir, ".gradleBuild/" + project.name)
+
 }
 
 subprojects {
-    repositories {
-        mavenCentral()
-    }
 
     repositories {
         flatDir dirs: ['../lib', 'libs']
     }
+    repositories {
+        mavenCentral()
+    }
 }
-
-

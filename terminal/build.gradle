@@ -16,37 +16,28 @@ sourceSets {
     }
 }
 
-//编译groovy代码时采用 UTF-8
-tasks.withType(GroovyCompile) {
-    groovyOptions.encoding = "UTF-8"
-}
-
-//编译JAVA文件时采用UTF-8
 tasks.withType(JavaCompile) {
-    options.encoding = "UTF-8"
+    options.encoding = 'UTF-8'
 }
 
 dependencies {
-    compile 'log4j:log4j:1.2.17'
-    compile 'org.jetbrains:annotations:18.0.0'
-    compile 'com.google.guava:guava:27.1-jre'
-    compile group: 'com.weblookandfeel', name: 'weblaf-parent', version: '1.2.12', ext: 'pom'
-    compile 'com.formdev:flatlaf:1.4'
-    testCompile 'junit:junit:4.12'
+    implementation 'org.jetbrains:annotations:20.1.0'
+    implementation 'org.slf4j:slf4j-api:1.7.32'
+    testRuntimeOnly "org.slf4j:slf4j-simple:1.7.32"
+    testImplementation 'junit:junit:4.13.2'
+    // https://mvnrepository.com/artifact/com.google.guava/guava
+    implementation 'com.google.guava:guava:31.0.1-jre'
 }
 
-
 compileJava {
-    sourceCompatibility = '1.8'
-    targetCompatibility = '1.8'
-    options.encoding =  "UTF-8"
+    sourceCompatibility = '11'
+    targetCompatibility = '11'
     options.debugOptions.debugLevel = 'lines,vars,source'
 }
 
 compileTestJava {
-    sourceCompatibility = '1.8'
-    targetCompatibility = '1.8'
-    options.encoding = "UTF-8"
+    sourceCompatibility = '11'
+    targetCompatibility = '11'
     options.debugOptions.debugLevel = 'lines,vars,source'
 }
 
