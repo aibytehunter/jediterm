@@ -1,14 +1,15 @@
 package com.jediterm.typeahead;
 
-import com.jediterm.typeahead.TypeAheadTerminalModel.LineWithCursorX;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+
+import com.jediterm.typeahead.TypeAheadTerminalModel.LineWithCursorX;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TerminalTypeAheadManager {
   public static final long MAX_TERMINAL_DELAY = TimeUnit.MILLISECONDS.toNanos(1500);
@@ -45,7 +46,7 @@ public class TerminalTypeAheadManager {
         resetState();
         return;
       }
-      LineWithCursorX lineWithCursorX = myTerminalModel.getCurrentLineWithCursor();
+      TypeAheadTerminalModel.LineWithCursorX lineWithCursorX = myTerminalModel.getCurrentLineWithCursor();
 
       if (!myPredictions.isEmpty()) {
         updateLeftMostCursorPosition(lineWithCursorX.myCursorX);
@@ -93,7 +94,7 @@ public class TerminalTypeAheadManager {
         return;
       }
 
-      LineWithCursorX lineWithCursorX = myTerminalModel.getCurrentLineWithCursor();
+      TypeAheadTerminalModel.LineWithCursorX lineWithCursorX = myTerminalModel.getCurrentLineWithCursor();
 
       long prevTypedTime = myLastTypedTime;
       myLastTypedTime = System.nanoTime();
@@ -152,8 +153,8 @@ public class TerminalTypeAheadManager {
       List<TypeAheadPrediction> predictions = getVisiblePredictions();
 
       int cursorX = predictions.isEmpty() ?
-        myTerminalModel.getCurrentLineWithCursor().myCursorX :
-        predictions.get(predictions.size() - 1).myPredictedLineWithCursorX.myCursorX;
+              myTerminalModel.getCurrentLineWithCursor().myCursorX :
+              predictions.get(predictions.size() - 1).myPredictedLineWithCursorX.myCursorX;
       return cursorX + 1;
     } finally {
       myTerminalModel.unlock();
@@ -163,10 +164,10 @@ public class TerminalTypeAheadManager {
   public void debounce() {
     myTerminalModel.lock();
     try {
-        if (!myPredictions.isEmpty()) {
-          LOG.debug("Debounce");
-          resetState();
-        }
+      if (!myPredictions.isEmpty()) {
+        LOG.debug("Debounce");
+        resetState();
+      }
     } finally {
       myTerminalModel.unlock();
     }
@@ -206,6 +207,9 @@ public class TerminalTypeAheadManager {
 
     // @see com.jediterm.terminal.TerminalKeyEncoder
     public static @NotNull List<@NotNull TypeAheadEvent> fromByteArray(byte[] byteArray) {
+      if (byteArray.length == 0) {
+        return Collections.emptyList();
+      }
       String stringRepresentation = new String(byteArray);
       if (isPrintableUnicode(stringRepresentation.charAt(0))) {
         return fromString(stringRepresentation);
@@ -223,12 +227,15 @@ public class TerminalTypeAheadManager {
     }
 
     public static @NotNull List<@NotNull TypeAheadEvent> fromString(@NotNull String string) {
-      ArrayList<@NotNull TypeAheadEvent> events = new ArrayList<>();
+      if (string.isEmpty()) {
+        return Collections.emptyList();
+      }
 
       if (!isPrintableUnicode(string.charAt(0))) {
         return Collections.singletonList(fromSequence(string.getBytes()));
       }
 
+      ArrayList<@NotNull TypeAheadEvent> events = new ArrayList<>();
       for (char ch : string.toCharArray()) {
         TypeAheadEvent event = fromChar(ch);
         events.add(event);
@@ -249,9 +256,9 @@ public class TerminalTypeAheadManager {
     private static boolean isPrintableUnicode(char c) {
       int t = Character.getType(c);
       return t != Character.UNASSIGNED && t != Character.LINE_SEPARATOR &&
-        t != Character.PARAGRAPH_SEPARATOR && t != Character.CONTROL &&
-        t != Character.FORMAT && t != Character.PRIVATE_USE &&
-        t != Character.SURROGATE;
+              t != Character.PARAGRAPH_SEPARATOR && t != Character.CONTROL &&
+              t != Character.FORMAT && t != Character.PRIVATE_USE &&
+              t != Character.SURROGATE;
     }
 
     private static @NotNull TypeAheadEvent fromSequence(byte[] byteArray) {
@@ -259,27 +266,27 @@ public class TerminalTypeAheadManager {
     }
 
     private static final Map<Sequence, EventType> sequenceToEventType = Map.ofEntries(
-      Map.entry(new Sequence(Ascii.ESC, '[', '3', '~'), EventType.Delete),
-      Map.entry(new Sequence(Ascii.DEL), EventType.Backspace),
-      Map.entry(new Sequence(Ascii.ESC, Ascii.DEL), EventType.AltBackspace),
-      Map.entry(new Sequence(Ascii.ESC, 'O', 'D'), EventType.LeftArrow),
-      Map.entry(new Sequence(Ascii.ESC, '[', 'D'), EventType.LeftArrow),
-      Map.entry(new Sequence(Ascii.ESC, 'O', 'C'), EventType.RightArrow),
-      Map.entry(new Sequence(Ascii.ESC, '[', 'C'), EventType.RightArrow),
-      Map.entry(new Sequence(Ascii.ESC, 'b'), EventType.AltLeftArrow),
-      Map.entry(new Sequence(Ascii.ESC, '[', '1', ';', '3', 'D'), EventType.AltLeftArrow),
-      // It's ctrl+left arrow, but behaves just the same
-      Map.entry(new Sequence(Ascii.ESC, '[',  '1', ';', '5', 'D'), EventType.AltLeftArrow),
-      Map.entry(new Sequence(Ascii.ESC, 'f'), EventType.AltRightArrow),
-      Map.entry(new Sequence(Ascii.ESC, '[', '1', ';', '3', 'C'), EventType.AltRightArrow),
-      // It's ctrl+right arrow, but behaves just the same
-      Map.entry(new Sequence(Ascii.ESC, '[',  '1', ';', '5', 'C'), EventType.AltRightArrow),
-      Map.entry(new Sequence(Ascii.ESC, '[', 'H'), EventType.Home),
-      Map.entry(new Sequence(Ascii.ESC, 'O', 'H'), EventType.Home),
-      Map.entry(new Sequence(1), EventType.Home), // ctrl + a
-      Map.entry(new Sequence(Ascii.ESC, '[', 'F'), EventType.End),
-      Map.entry(new Sequence(Ascii.ESC, 'O', 'F'), EventType.End),
-      Map.entry(new Sequence(5), EventType.End) // ctrl + e
+            Map.entry(new Sequence(Ascii.ESC, '[', '3', '~'), EventType.Delete),
+            Map.entry(new Sequence(Ascii.DEL), EventType.Backspace),
+            Map.entry(new Sequence(Ascii.ESC, Ascii.DEL), EventType.AltBackspace),
+            Map.entry(new Sequence(Ascii.ESC, 'O', 'D'), EventType.LeftArrow),
+            Map.entry(new Sequence(Ascii.ESC, '[', 'D'), EventType.LeftArrow),
+            Map.entry(new Sequence(Ascii.ESC, 'O', 'C'), EventType.RightArrow),
+            Map.entry(new Sequence(Ascii.ESC, '[', 'C'), EventType.RightArrow),
+            Map.entry(new Sequence(Ascii.ESC, 'b'), EventType.AltLeftArrow),
+            Map.entry(new Sequence(Ascii.ESC, '[', '1', ';', '3', 'D'), EventType.AltLeftArrow),
+            // It's ctrl+left arrow, but behaves just the same
+            Map.entry(new Sequence(Ascii.ESC, '[',  '1', ';', '5', 'D'), EventType.AltLeftArrow),
+            Map.entry(new Sequence(Ascii.ESC, 'f'), EventType.AltRightArrow),
+            Map.entry(new Sequence(Ascii.ESC, '[', '1', ';', '3', 'C'), EventType.AltRightArrow),
+            // It's ctrl+right arrow, but behaves just the same
+            Map.entry(new Sequence(Ascii.ESC, '[',  '1', ';', '5', 'C'), EventType.AltRightArrow),
+            Map.entry(new Sequence(Ascii.ESC, '[', 'H'), EventType.Home),
+            Map.entry(new Sequence(Ascii.ESC, 'O', 'H'), EventType.Home),
+            Map.entry(new Sequence(1), EventType.Home), // ctrl + a
+            Map.entry(new Sequence(Ascii.ESC, '[', 'F'), EventType.End),
+            Map.entry(new Sequence(Ascii.ESC, 'O', 'F'), EventType.End),
+            Map.entry(new Sequence(5), EventType.End) // ctrl + e
     );
 
     private static class Sequence {
@@ -366,7 +373,7 @@ public class TerminalTypeAheadManager {
   private @NotNull List<@NotNull TypeAheadPrediction> getVisiblePredictions() {
     int lastVisiblePredictionIndex = 0;
     while (lastVisiblePredictionIndex < myPredictions.size()
-      && myPredictions.get(lastVisiblePredictionIndex).myIsNotTentative) {
+            && myPredictions.get(lastVisiblePredictionIndex).myIsNotTentative) {
       lastVisiblePredictionIndex++;
     }
     lastVisiblePredictionIndex--;
@@ -450,7 +457,7 @@ public class TerminalTypeAheadManager {
         }
 
         boolean hasCharacterPredictions = myPredictions.stream().anyMatch(
-          (TypeAheadPrediction prediction) -> prediction instanceof CharacterPrediction);
+                (TypeAheadPrediction prediction) -> prediction instanceof CharacterPrediction);
 
         Character ch = keyEvent.getCharacterOrNull();
         if (ch == null) {
@@ -468,7 +475,7 @@ public class TerminalTypeAheadManager {
         }
 
         return new CharacterPrediction(newLineWCursorX, ch,
-          (myIsNotPasswordPrompt || hasCharacterPredictions) && myIsShowingPredictions);
+                (myIsNotPasswordPrompt || hasCharacterPredictions) && myIsShowingPredictions);
       case Backspace:
         if (newLineWCursorX.myCursorX == 0) {
           return new HardBoundary();
@@ -479,8 +486,8 @@ public class TerminalTypeAheadManager {
           newLineWCursorX.myLineText.deleteCharAt(newLineWCursorX.myCursorX);
         }
         return new BackspacePrediction(newLineWCursorX, 1,
-          myLeftMostCursorPosition != null && myLeftMostCursorPosition <= newLineWCursorX.myCursorX
-            && myIsShowingPredictions);
+                myLeftMostCursorPosition != null && myLeftMostCursorPosition <= newLineWCursorX.myCursorX
+                        && myIsShowingPredictions);
       case AltBackspace:
         int oldCursorX = newLineWCursorX.myCursorX;
         newLineWCursorX.moveToWordBoundary(false, myTerminalModel.getShellType());
@@ -494,38 +501,38 @@ public class TerminalTypeAheadManager {
           newLineWCursorX.myLineText.delete(newLineWCursorX.myCursorX, Math.min(oldCursorX, newLineWCursorX.myLineText.length()));
         }
         return new BackspacePrediction(newLineWCursorX, amount,
-          myLeftMostCursorPosition != null && myLeftMostCursorPosition <= newLineWCursorX.myCursorX
-            && myIsShowingPredictions);
+                myLeftMostCursorPosition != null && myLeftMostCursorPosition <= newLineWCursorX.myCursorX
+                        && myIsShowingPredictions);
       case LeftArrow:
       case RightArrow:
         amount = keyEvent.myEventType == TypeAheadEvent.EventType.RightArrow ? 1 : -1;
         newLineWCursorX.myCursorX += amount;
 
         if (newLineWCursorX.myCursorX < 0 || newLineWCursorX.myCursorX
-          >= Math.max(newLineWCursorX.myLineText.length() + 1, myTerminalModel.getTerminalWidth())) {
+                >= Math.max(newLineWCursorX.myLineText.length() + 1, myTerminalModel.getTerminalWidth())) {
           return new HardBoundary();
         }
 
         return new CursorMovePrediction(newLineWCursorX, amount,
-          myLeftMostCursorPosition != null && myLeftMostCursorPosition <= newLineWCursorX.myCursorX
-            && newLineWCursorX.myCursorX <= newLineWCursorX.myLineText.length() && myIsShowingPredictions);
+                myLeftMostCursorPosition != null && myLeftMostCursorPosition <= newLineWCursorX.myCursorX
+                        && newLineWCursorX.myCursorX <= newLineWCursorX.myLineText.length() && myIsShowingPredictions);
       case AltLeftArrow:
       case AltRightArrow:
         oldCursorX = newLineWCursorX.myCursorX;
         newLineWCursorX.moveToWordBoundary(
-          keyEvent.myEventType == TypeAheadEvent.EventType.AltRightArrow,
-          myTerminalModel.getShellType()
+                keyEvent.myEventType == TypeAheadEvent.EventType.AltRightArrow,
+                myTerminalModel.getShellType()
         );
 
         if (newLineWCursorX.myCursorX < 0 || newLineWCursorX.myCursorX
-          >= Math.max(newLineWCursorX.myLineText.length() + 1, myTerminalModel.getTerminalWidth())) {
+                >= Math.max(newLineWCursorX.myLineText.length() + 1, myTerminalModel.getTerminalWidth())) {
           return new HardBoundary();
         }
         amount = newLineWCursorX.myCursorX - oldCursorX;
 
         return new CursorMovePrediction(newLineWCursorX, amount,
-          myLeftMostCursorPosition != null && myLeftMostCursorPosition <= newLineWCursorX.myCursorX
-            && newLineWCursorX.myCursorX <= newLineWCursorX.myLineText.length() && myIsShowingPredictions);
+                myLeftMostCursorPosition != null && myLeftMostCursorPosition <= newLineWCursorX.myCursorX
+                        && newLineWCursorX.myCursorX <= newLineWCursorX.myLineText.length() && myIsShowingPredictions);
       case Delete:
         if (newLineWCursorX.myCursorX < newLineWCursorX.myLineText.length()) {
           newLineWCursorX.myLineText.deleteCharAt(newLineWCursorX.myCursorX);
