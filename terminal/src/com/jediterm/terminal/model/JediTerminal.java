@@ -1191,12 +1191,13 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
     return myStyleState;
   }
 
-  public SubstringFinder.FindResult searchInTerminalTextBuffer(@NotNull String pattern, boolean ignoreCase) {
-    if (pattern.length() == 0) {
-      return null;
-    }
-
-    final SubstringFinder finder = new SubstringFinder(pattern, ignoreCase);
+    public SubstringFinder.FindResult searchInTerminalTextBuffer(final String pattern, boolean ignoreCase) {
+        String newPattern = pattern;
+        if (newPattern.length() == 0) {
+            return null;
+        }
+        newPattern = stringToDoubleWidthCharacter(pattern);
+        final SubstringFinder finder = new SubstringFinder(newPattern, ignoreCase);
 
     myTerminalTextBuffer.processHistoryAndScreenLines(-myTerminalTextBuffer.getHistoryLinesCount(), -1, new StyledTextConsumer() {
       @Override
@@ -1224,6 +1225,34 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
 
     return finder.getResult();
   }
+
+    private String stringToDoubleWidthCharacter(String str) {
+        char[] chars = str.toCharArray();
+        int dwcCount = CharUtils.countDoubleWidthCharacters(chars, 0, chars.length, myDisplay.ambiguousCharsAreDoubleWidth());
+
+        char[] buf;
+
+        if (dwcCount > 0) {
+            // Leave gaps for the private use "DWC" character, which simply tells the rendering code to advance one cell.
+            buf = new char[chars.length + dwcCount];
+
+            int j = 0;
+            for (int i = 0; i < chars.length; i++) {
+                buf[j] = chars[i];
+                int codePoint = Character.codePointAt(chars, i);
+                boolean doubleWidthCharacter = CharUtils.isDoubleWidthCharacter(codePoint, myDisplay.ambiguousCharsAreDoubleWidth());
+                if (doubleWidthCharacter) {
+                    j++;
+                    //TODO 此处控制输出字符
+                    buf[j] = CharUtils.FILL_CHAR;
+                }
+                j++;
+            }
+        } else {
+            buf = chars;
+        }
+        return new String(buf, 0, buf.length);
+    }
 
 
   private static class DefaultTabulator implements Tabulator {

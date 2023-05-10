@@ -20,6 +20,7 @@ public class CharUtils {
 
   //JediTerm Unicode private use area U+100000–U+10FFFD
   public static final char DWC = '\uE000'; //Second part of double-width character
+    public static final char FILL_CHAR = DWC; //填充点位符
 
   private CharUtils() {
   }

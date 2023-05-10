@@ -45,6 +45,7 @@ dependencies {
     implementation 'net.java.dev.jna:jna:4.5.0'
     implementation 'net.java.dev.jna:jna-platform:4.5.0'
     implementation ":trove4j:"
+    implementation 'com.formdev:flatlaf:3.0'
 }
 
 mainClassName = "com.jediterm.app.JediTermMain"

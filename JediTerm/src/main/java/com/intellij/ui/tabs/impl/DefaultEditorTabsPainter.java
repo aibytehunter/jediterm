@@ -26,49 +26,51 @@ import java.awt.*;
 @SuppressWarnings("UseJBColor")
 public class DefaultEditorTabsPainter extends JBEditorTabsPainter {
 
-  @Override
-  public void doPaintInactive(Graphics2D g2d,
-                              Rectangle effectiveBounds,
-                              int x,
-                              int y,
-                              int w,
-                              int h,
-                              Color tabColor,
-                              int row,
-                              int column,
-                              boolean vertical) {
-    ;
-    g2d.setColor(tabColor != null ? tabColor : getDefaultTabColor());
-    g2d.fillRect(x, y, w, h);
-    g2d.setColor(getInactiveMaskColor());
-    g2d.fillRect(x, y, w, h);
-  }
-
-  @Override
-  public void doPaintBackground(Graphics2D g, Rectangle clip, boolean vertical, Rectangle rectangle) {
-    g.setColor(getBackgroundColor());
-    g.fill(clip);
-  }
-
-  public void fillSelectionAndBorder(Graphics2D g, JBTabsImpl.ShapeInfo selectedShape, Color tabColor, int x, int y, int height) {
-    g.setColor(tabColor != null ? tabColor : getDefaultTabColor());
-    g.fill(selectedShape.fillPath.getShape());
-    //g.draw(selectedShape.fillPath.getShape());
-  }
-
-  @Override
-  public Color getBackgroundColor() {
-    return UIUtil.CONTRAST_BORDER_COLOR;
-  }
-
-  protected Color getDefaultTabColor() {
-    if (myDefaultTabColor != null) {
-      return myDefaultTabColor;
+    @Override
+    public void doPaintInactive(Graphics2D g2d, Rectangle effectiveBounds, int x, int y, int w, int h, Color tabColor, int row, int column, boolean vertical) {
+        //消除文字锯齿
+        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        //消除画图锯齿
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setColor(tabColor != null ? tabColor : getDefaultTabColor());
+        g2d.fillRect(x, y, w, h);
+        g2d.setColor(getInactiveMaskColor());
+        g2d.fillRect(x, y, w, h);
     }
-    return Color.WHITE;
-  }
 
-  protected Color getInactiveMaskColor() {
-    return ColorUtil.withAlpha(new Color(0x262626), .2);
-  }
+    @Override
+    public void doPaintBackground(Graphics2D g, Rectangle clip, boolean vertical, Rectangle rectangle) {
+        //消除文字锯齿
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        //消除画图锯齿
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(getBackgroundColor());
+        g.fill(clip);
+    }
+
+    public void fillSelectionAndBorder(Graphics2D g, JBTabsImpl.ShapeInfo selectedShape, Color tabColor, int x, int y, int height) {
+        //消除文字锯齿
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        //消除画图锯齿
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(tabColor != null ? tabColor : getDefaultTabColor());
+        g.fill(selectedShape.fillPath.getShape());
+        //g.draw(selectedShape.fillPath.getShape());
+    }
+
+    @Override
+    public Color getBackgroundColor() {
+        return UIUtil.CONTRAST_BORDER_COLOR;
+    }
+
+    protected Color getDefaultTabColor() {
+        if (myDefaultTabColor != null) {
+            return myDefaultTabColor;
+        }
+        return Color.WHITE;
+    }
+
+    protected Color getInactiveMaskColor() {
+        return ColorUtil.withAlpha(new Color(0x262626), .2);
+    }
 }
