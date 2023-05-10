@@ -1,7 +1,5 @@
 package com.jediterm.terminal.debug;
 
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
@@ -28,7 +26,7 @@ public class ControlSequenceVisualizer {
   @NotNull String getVisualizedString(@NotNull List<char[]> chunks) {
     try {
       writeChunksToFile(chunks);
-      return readOutput(Lists.newArrayList("teseq", myTempFile.getAbsolutePath()));
+      return readOutput(List.of("teseq", myTempFile.getAbsolutePath()));
     }
     catch (IOException e) {
       return
@@ -69,7 +67,7 @@ public class ControlSequenceVisualizer {
         sb.append(lastNum);
       } else {
         if (lastNum != null) {
-          sb.append(Strings.repeat(" ",lastNum.length()));
+          sb.append(" ".repeat(lastNum.length()));
         }
       }
       sb.append(line);

@@ -38,7 +38,7 @@ public final class TerminalLine {
 
   public @NotNull String getText() {
     StringBuilder result = new StringBuilder(myTextEntries.myLength);
-    for (TextEntry textEntry : myTextEntries) {
+    for (TerminalLine.TextEntry textEntry : myTextEntries) {
       // NUL can only be at the end
       if (textEntry.getText().isNul()) {
         break;

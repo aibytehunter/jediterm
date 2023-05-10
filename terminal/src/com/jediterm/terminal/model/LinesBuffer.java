@@ -56,7 +56,7 @@ public class LinesBuffer {
 
 
   public synchronized void addNewLine(@NotNull TextStyle style, @NotNull CharBuffer characters) {
-    addNewLine(new TextEntry(style, characters));
+    addNewLine(new TerminalLine.TextEntry(style, characters));
   }
 
 

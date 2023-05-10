@@ -29,7 +29,7 @@ import java.util.Collection;
 public interface Function<Param, Result> {
   Result fun(Param param);
 
-  Function ID = new Mono() {
+  Function ID = new Function.Mono() {
     public Object fun(Object o) {
       return o;
     }

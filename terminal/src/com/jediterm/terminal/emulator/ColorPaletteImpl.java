@@ -1,8 +1,7 @@
 package com.jediterm.terminal.emulator;
 
+import com.jediterm.core.Color;
 import org.jetbrains.annotations.NotNull;
-
-import java.awt.*;
 
 public class ColorPaletteImpl extends ColorPalette {
 

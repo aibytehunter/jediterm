@@ -1,16 +1,18 @@
 package com.jediterm.terminal.emulator;
 
+import com.jediterm.core.Color;
+import com.jediterm.core.util.Ascii;
+import com.jediterm.core.util.TermSize;
 import com.jediterm.terminal.*;
 import com.jediterm.terminal.emulator.mouse.MouseFormat;
 import com.jediterm.terminal.emulator.mouse.MouseMode;
 import com.jediterm.terminal.util.CharUtils;
-import com.jediterm.typeahead.Ascii;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -19,8 +21,8 @@ import java.util.function.BiConsumer;
 /**
  * The main terminal emulator class.
  * <p/>
- * Obtains data from the  {@link TerminalDataStream}, interprets terminal ANSI escape sequences as commands and directs them
- * as well as plain data characters to the  {@link Terminal}
+ * Obtains data from the  {@link com.jediterm.terminal.TerminalDataStream}, interprets terminal ANSI escape sequences as commands and directs them
+ * as well as plain data characters to the  {@link com.jediterm.terminal.Terminal}
  *
  * @author traff
  */
@@ -78,6 +80,9 @@ public class JediEmulator extends DataStreamIteratingEmulator {
       case Ascii.ESC: // ESC
         processEscapeSequence(myDataStream.getChar(), myTerminal);
         break;
+      case SystemCommandSequence.OSC:
+        processOsc();
+        break;
       default:
         if (ch <= Ascii.US) {
           StringBuilder sb = new StringBuilder("Unhandled control character:");
@@ -106,7 +111,7 @@ public class JediEmulator extends DataStreamIteratingEmulator {
         if (!args.pushBackReordered(myDataStream)) {
           boolean result = processControlSequence(args);
           if (!result) {
-            LOG.error("Unhandled Control Sequence (" + args.getDebugInfo() + ")");
+            LOG.warn("Unhandled Control Sequence (" + args.getDebugInfo() + ")");
           }
         }
         break;
@@ -132,16 +137,11 @@ public class JediEmulator extends DataStreamIteratingEmulator {
         SystemCommandSequence command = new SystemCommandSequence(myDataStream);
 
         if (!deviceControlString(command)) {
-          LOG.error("Error processing DCS: ESCP" + command);
+          LOG.warn("Error processing DCS: ESCP" + command);
         }
         break;
       case ']': // Operating System Command (OSC)
-        // xterm uses it to set parameters like windows title
-        command = new SystemCommandSequence(myDataStream);
-
-        if (!operatingSystemCommand(command)) {
-          LOG.error("Error processing OSC: ESC]" + command);
-        }
+        processOsc();
         break;
       case '6':
         unsupported("Back Index (DECBI), VT420 and up");
@@ -200,6 +200,13 @@ public class JediEmulator extends DataStreamIteratingEmulator {
     }
   }
 
+  private void processOsc() throws IOException {
+    SystemCommandSequence command = new SystemCommandSequence(myDataStream);
+    if (!operatingSystemCommand(command)) {
+      LOG.warn("Error processing OSC: ESC]" + command);
+    }
+  }
+
   private boolean deviceControlString(SystemCommandSequence args) {
     return false;
   }
@@ -237,6 +244,10 @@ public class JediEmulator extends DataStreamIteratingEmulator {
       case 10:
       case 11:
         return processColorQuery(args);
+      case 1341:
+        List<String> argList = args.getArgs();
+        myTerminal.processCustomCommand(argList.subList(1, argList.size()));
+        return true;
     }
     return false;
   }
@@ -253,7 +264,7 @@ public class JediEmulator extends DataStreamIteratingEmulator {
       return false;
     }
     int ps = args.getIntAt(0, -1);
-    TerminalColor color;
+    Color color;
     if (ps == 10) {
       color = myTerminal.getWindowForeground();
     }
@@ -264,20 +275,13 @@ public class JediEmulator extends DataStreamIteratingEmulator {
       return false;
     }
     if (color != null) {
-      String str = args.format(ps + ";" + formatXParseColor(color));
+      String str = args.format(ps + ";" + color.toXParseColor());
       if (LOG.isDebugEnabled()) {
         LOG.debug("Responding to OSC " + ps + " query: " + str);
       }
       myTerminal.deviceStatusReport(str);
     }
     return true;
-  }
-
-  /**
-   * Returns <a href="https://linux.die.net/man/3/xparsecolor">XParseColor</a> representation of TerminalColor
-   */
-  private static @NotNull String formatXParseColor(TerminalColor color) {
-    return "rgb:" + color.toHexString16();
   }
 
   private void processTwoCharSequence(char ch, Terminal terminal) throws IOException {
@@ -287,10 +291,10 @@ public class JediEmulator extends DataStreamIteratingEmulator {
         switch (secondCh) {
           //About different character sets: http://en.wikipedia.org/wiki/ISO/IEC_2022
           case 'F': //7-bit controls
-            unsupported("Switching ot 7-bit");
+            unsupported("Switching to 7-bit");
             break;
           case 'G': //8-bit controls
-            unsupported("Switching ot 8-bit");
+            unsupported("Switching to 8-bit");
             break;
           //About ANSI conformance levels: http://www.vt100.net/docs/vt510-rm/ANSI
           case 'L': //Set ANSI conformance level 1
@@ -379,7 +383,7 @@ public class JediEmulator extends DataStreamIteratingEmulator {
         if (logThrottlerLimit / logThrottlerRatio > 1) {
           msg += " and " + (logThrottlerLimit / logThrottlerRatio) + " more...";
         }
-        LOG.error(msg);
+        LOG.warn(msg);
       }
     } else {
       logThrottlerLimit *= 10;
@@ -492,7 +496,7 @@ public class JediEmulator extends DataStreamIteratingEmulator {
         if (height == 0) {
           height = myTerminal.getTerminalHeight();
         }
-        myTerminal.resize(new Dimension(width, height), RequestOrigin.Remote);
+        myTerminal.resize(new TermSize(width, height), RequestOrigin.Remote);
         return true;
       case 22:
         return csi22(args);
@@ -685,14 +689,14 @@ public class JediEmulator extends DataStreamIteratingEmulator {
   }
 
   private boolean restoreDecPrivateModeValues(ControlSequence args) {
-    LOG.error("Unsupported: " + args.toString());
+    LOG.warn("Unsupported: " + args.toString());
 
     return false;
   }
 
   private boolean deviceStatusReport(ControlSequence args) {
     if (args.startsWithQuestionMark()) {
-      LOG.error("Don't support DEC-specific Device Report Status");
+      LOG.warn("Don't support DEC-specific Device Report Status");
       return false;
     }
     int c = args.getArg(0, 0);
@@ -710,7 +714,7 @@ public class JediEmulator extends DataStreamIteratingEmulator {
       myTerminal.deviceStatusReport(str);
       return true;
     } else {
-      LOG.error("Sending Device Report Status : unsupported parameter: " + args.toString());
+      LOG.warn("Sending Device Report Status : unsupported parameter: " + args.toString());
       return false;
     }
   }
@@ -738,7 +742,7 @@ public class JediEmulator extends DataStreamIteratingEmulator {
         myTerminal.cursorShape(CursorShape.STEADY_VERTICAL_BAR);
         return true;
       default:
-        LOG.error("Setting cursor shape : unsupported parameter " + args.toString());
+        LOG.warn("Setting cursor shape : unsupported parameter " + args.toString());
         return false;
     }
   }
@@ -912,7 +916,7 @@ public class JediEmulator extends DataStreamIteratingEmulator {
 
       final int arg = args.getArg(i, -1);
       if (arg == -1) {
-        LOG.error("Error in processing char attributes, arg " + i);
+        LOG.warn("Error in processing char attributes, arg " + i);
         i++;
         continue;
       }
@@ -1024,7 +1028,7 @@ public class JediEmulator extends DataStreamIteratingEmulator {
           builder.setBackground(ColorPalette.getIndexedTerminalColor(arg - 92));
           break;
         default:
-          LOG.error("Unknown character attribute:" + arg);
+          LOG.warn("Unknown character attribute:" + arg);
       }
       i = i + step;
     }
@@ -1044,14 +1048,14 @@ public class JediEmulator extends DataStreamIteratingEmulator {
               (val2 >= 0 && val2 < 256)) {
         return new TerminalColor(val0, val1, val2);
       } else {
-        LOG.error("Bogus color setting " + args.toString());
+        LOG.warn("Bogus color setting " + args.toString());
         return null;
       }
     } else if (code == 5) {
       /* indexed color */
       return ColorPalette.getIndexedTerminalColor(args.getArg(index + 2, 0));
     } else {
-      LOG.error("Unsupported code for color attribute " + args.toString());
+      LOG.warn("Unsupported code for color attribute " + args.toString());
       return null;
     }
   }

@@ -1,12 +1,12 @@
 package com.jediterm.terminal.model;
 
+import com.jediterm.core.compatibility.Point;
 import com.jediterm.terminal.util.CharUtils;
 import com.jediterm.terminal.util.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 

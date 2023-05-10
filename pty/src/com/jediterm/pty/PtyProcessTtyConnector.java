@@ -1,12 +1,12 @@
 package com.jediterm.pty;
 
+import com.jediterm.core.util.TermSize;
 import com.jediterm.terminal.ProcessTtyConnector;
 import com.pty4j.PtyProcess;
 import com.pty4j.WinSize;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.awt.Dimension;
 import java.nio.charset.Charset;
 import java.util.List;
 
@@ -26,15 +26,15 @@ public class PtyProcessTtyConnector extends ProcessTtyConnector {
   }
 
   @Override
-  public void resize(@NotNull Dimension termWinSize) {
+  public void resize(@NotNull TermSize termSize) {
     if (isConnected()) {
-      myProcess.setWinSize(new WinSize(termWinSize.width, termWinSize.height));
+      myProcess.setWinSize(new WinSize(termSize.getColumns(), termSize.getRows()));
     }
   }
 
   @Override
   public boolean isConnected() {
-    return myProcess.isRunning();
+    return myProcess.isAlive();
   }
 
   @Override

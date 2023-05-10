@@ -3,7 +3,6 @@ package com.jediterm.terminal;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.awt.Dimension;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -20,7 +19,6 @@ public abstract class ProcessTtyConnector implements TtyConnector {
   protected final OutputStream myOutputStream;
   protected final InputStreamReader myReader;
   protected final Charset myCharset;
-  private Dimension myPendingTermSize;
   private final Process myProcess;
   private final @Nullable List<String> myCommandLine;
 
@@ -41,21 +39,6 @@ public abstract class ProcessTtyConnector implements TtyConnector {
   public Process getProcess() {
     return myProcess;
   }
-
-  @Override
-  public void resize(@NotNull Dimension termWinSize) {
-    setPendingTermSize(termWinSize);
-    if (isConnected()) {
-      resizeImmediately();
-      setPendingTermSize(null);
-    }
-  }
-
-  /**
-   * @deprecated override {@link #resize(Dimension)} instead
-   */
-  @Deprecated
-  protected void resizeImmediately() {}
 
   @Override
   public abstract String getName();
@@ -81,35 +64,6 @@ public abstract class ProcessTtyConnector implements TtyConnector {
   @Override
   public void write(String string) throws IOException {
     write(string.getBytes(myCharset));
-  }
-
-  /**
-   * @deprecated override {@link #resize(Dimension)} instead
-   */
-  @Deprecated
-  protected void setPendingTermSize(@Nullable Dimension pendingTermSize) {
-    myPendingTermSize = pendingTermSize;
-  }
-
-  /**
-   * @deprecated override {@link #resize(Dimension)} instead
-   */
-  @Deprecated
-  protected @Nullable Dimension getPendingTermSize() {
-    return myPendingTermSize;
-  }
-
-  /**
-   * @deprecated don't use it (pixel size is not used anymore)
-   */
-  @Deprecated
-  protected Dimension getPendingPixelSize() {
-    return new Dimension(0, 0);
-  }
-
-  @Override
-  public boolean init(Questioner q) {
-    return isConnected();
   }
 
   @Override

@@ -1,11 +1,13 @@
 package com.jediterm.ui;
 
 import com.jediterm.app.JediTerm;
+import com.jediterm.core.compatibility.Point;
 import com.jediterm.terminal.RequestOrigin;
 import com.jediterm.terminal.TtyConnector;
 import com.jediterm.terminal.debug.BufferPanel;
 import com.jediterm.terminal.model.SelectionUtil;
 import com.jediterm.terminal.ui.JediTermWidget;
+import com.jediterm.terminal.ui.TerminalPanel;
 import com.jediterm.terminal.ui.TerminalPanelListener;
 import com.jediterm.terminal.ui.TerminalWidget;
 import com.jediterm.terminal.ui.settings.DefaultTabbedSettingsProvider;
@@ -23,21 +25,20 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.logging.Level;
 
-
 public abstract class AbstractTerminalFrame {
   public static final Logger LOG = LoggerFactory.getLogger(AbstractTerminalFrame.class);
-
   private JFrame myBufferFrame;
 
-  private final TerminalWidget myTerminal;
-  
-  private AbstractAction myOpenAction = new AbstractAction("New Session") {
+  private final AbstractTabbedTerminalWidget<JediTermWidget> myTerminal;
+  private final JFrame myFrame;
+
+  private final AbstractAction myOpenAction = new AbstractAction("New Session") {
     public void actionPerformed(final ActionEvent e) {
       openSession(myTerminal);
     }
   };
 
-  private AbstractAction myShowBuffersAction = new AbstractAction("Show buffers") {
+  private final AbstractAction myShowBuffersAction = new AbstractAction("Show buffers") {
     public void actionPerformed(final ActionEvent e) {
       if (myBufferFrame == null) {
         showBuffers();
@@ -45,44 +46,44 @@ public abstract class AbstractTerminalFrame {
     }
   };
 
-  private AbstractAction myDumpDimension = new AbstractAction("Dump terminal dimension") {
+  private final AbstractAction myDumpDimension = new AbstractAction("Dump terminal dimension") {
     public void actionPerformed(final ActionEvent e) {
       LOG.info(myTerminal.getTerminalDisplay().getColumnCount() +
-          "x" + myTerminal.getTerminalDisplay().getRowCount());
+        "x" + myTerminal.getTerminalDisplay().getRowCount());
     }
   };
 
-  private AbstractAction myDumpSelection = new AbstractAction("Dump selection") {
+  private final AbstractAction myDumpSelection = new AbstractAction("Dump selection") {
     public void actionPerformed(final ActionEvent e) {
-      Pair<Point, Point> points = myTerminal.getTerminalDisplay()
-          .getSelection().pointsForRun(myTerminal.getTerminalDisplay().getColumnCount());
-      LOG.info(myTerminal.getTerminalDisplay().getSelection() + " : '"
-          + SelectionUtil.getSelectionText(points.first, points.second, myTerminal.getCurrentSession().getTerminalTextBuffer()) + "'");
+      TerminalPanel terminalPanel = myTerminal.getCurrentSession().getTerminalPanel();
+      Pair<Point, Point> points = terminalPanel.getSelection().pointsForRun(terminalPanel.getColumnCount());
+      LOG.info(terminalPanel.getSelection() + " : '"
+        + SelectionUtil.getSelectionText(points.first, points.second, terminalPanel.getTerminalTextBuffer()) + "'");
     }
   };
 
-  private AbstractAction myDumpCursorPosition = new AbstractAction("Dump cursor position") {
+  private final AbstractAction myDumpCursorPosition = new AbstractAction("Dump cursor position") {
     public void actionPerformed(final ActionEvent e) {
       LOG.info(myTerminal.getCurrentSession().getTerminal().getCursorX() +
-          "x" + myTerminal.getCurrentSession().getTerminal().getCursorY());
+        "x" + myTerminal.getCurrentSession().getTerminal().getCursorY());
     }
   };
 
-  private AbstractAction myCursor0x0 = new AbstractAction("1x1") {
+  private final AbstractAction myCursor0x0 = new AbstractAction("1x1") {
     public void actionPerformed(final ActionEvent e) {
-         myTerminal.getCurrentSession().getTerminal().cursorPosition(1, 1);
+      myTerminal.getCurrentSession().getTerminal().cursorPosition(1, 1);
     }
   };
 
-  private AbstractAction myCursor10x10 = new AbstractAction("10x10") {
+  private final AbstractAction myCursor10x10 = new AbstractAction("10x10") {
     public void actionPerformed(final ActionEvent e) {
-         myTerminal.getCurrentSession().getTerminal().cursorPosition(10, 10);
+      myTerminal.getCurrentSession().getTerminal().cursorPosition(10, 10);
     }
   };
 
-  private AbstractAction myCursor80x24 = new AbstractAction("80x24") {
+  private final AbstractAction myCursor80x24 = new AbstractAction("80x24") {
     public void actionPerformed(final ActionEvent e) {
-         myTerminal.getCurrentSession().getTerminal().cursorPosition(80, 24);
+      myTerminal.getCurrentSession().getTerminal().cursorPosition(80, 24);
     }
   };
 
@@ -95,8 +96,8 @@ public abstract class AbstractTerminalFrame {
     final JMenu dm = new JMenu("Debug");
 
     JMenu logLevel = new JMenu("Set log level ...");
-    Level[] levels = new Level[] {Level.ALL, Level.FINE, Level.INFO, Level.WARNING, Level.SEVERE, Level.OFF};
-    for(final Level l : levels) {
+    Level[] levels = new Level[]{Level.ALL, Level.FINE, Level.INFO, Level.WARNING, Level.SEVERE, Level.OFF};
+    for (final Level l : levels) {
       logLevel.add(new AbstractAction(l.toString()) {
         @Override
         public void actionPerformed(ActionEvent e) {
@@ -112,7 +113,7 @@ public abstract class AbstractTerminalFrame {
     dm.add(myDumpDimension);
     dm.add(myDumpSelection);
     dm.add(myDumpCursorPosition);
-    
+
     JMenu cursorPosition = new JMenu("Set cursor position ...");
     cursorPosition.add(myCursor0x0);
     cursorPosition.add(myCursor10x10);
@@ -144,9 +145,11 @@ public abstract class AbstractTerminalFrame {
 
   protected AbstractTerminalFrame() {
     AbstractTabbedTerminalWidget<? extends JediTermWidget> tabbedTerminalWidget = createTabbedTerminalWidget();
-    myTerminal = tabbedTerminalWidget;
+    //noinspection unchecked
+    myTerminal = (AbstractTabbedTerminalWidget<JediTermWidget>) tabbedTerminalWidget;
 
     final JFrame frame = new JFrame("JediTerm");
+    myFrame = frame;
 
     frame.addWindowListener(new WindowAdapter() {
       @Override
@@ -155,8 +158,8 @@ public abstract class AbstractTerminalFrame {
       }
     });
 
-//    final JMenuBar mb = getJMenuBar();
-//    frame.setJMenuBar(mb);
+    final JMenuBar mb = getJMenuBar();
+    frame.setJMenuBar(mb);
     sizeFrameForTerm(frame);
     frame.getContentPane().add("Center", myTerminal.getComponent());
 
@@ -166,20 +169,7 @@ public abstract class AbstractTerminalFrame {
 
     frame.setResizable(true);
 
-    tabbedTerminalWidget.addTabListener(new AbstractTabbedTerminalWidget.TabListener<>() {
-      @Override
-      public void tabClosed(JediTermWidget terminal) {
-        AbstractTabs<?> tabs = tabbedTerminalWidget.getTerminalTabs();
-        if (tabs == null || tabs.getTabCount() == 0) {
-          System.exit(0);
-        }
-      }
-
-      @Override
-      public void onSelectedTabChanged(@NotNull JediTermWidget terminal) {
-        frame.setTitle(terminal.getSessionName());
-      }
-    });
+    tabbedTerminalWidget.addTabListener(new MyTabListener<>());
     myTerminal.setTerminalPanelListener(new TerminalPanelListener() {
       public void onPanelResize(@NotNull RequestOrigin origin) {
         if (origin == RequestOrigin.Remote) {
@@ -241,4 +231,18 @@ public abstract class AbstractTerminalFrame {
     });
   }
 
+  private class MyTabListener<T extends JediTermWidget> implements AbstractTabbedTerminalWidget.TabListener<T> {
+    @Override
+    public void tabClosed(@NotNull T terminal) {
+      AbstractTabs<?> tabs = myTerminal.getTerminalTabs();
+      if (tabs == null || tabs.getTabCount() == 0) {
+        System.exit(0);
+      }
+    }
+
+    @Override
+    public void onSelectedTabChanged(@NotNull T terminal) {
+      myFrame.setTitle(myTerminal.getTabName(terminal));
+    }
+  }
 }

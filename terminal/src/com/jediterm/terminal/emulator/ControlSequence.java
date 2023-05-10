@@ -1,8 +1,8 @@
 package com.jediterm.terminal.emulator;
 
+import com.jediterm.core.util.Ascii;
 import com.jediterm.terminal.TerminalDataStream;
 import com.jediterm.terminal.util.CharUtils;
-import com.jediterm.typeahead.Ascii;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;

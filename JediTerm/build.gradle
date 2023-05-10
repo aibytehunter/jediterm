@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.5.10'
+    ext.kotlin_version = '1.7.10'
     repositories {
         mavenCentral()
     }
@@ -32,10 +32,14 @@ sourceSets {
 
 dependencies {
     implementation project(':pty')
+
+
     implementation ":eawtstub:"
-    implementation 'org.slf4j:slf4j-api:1.7.32'
-    testImplementation 'junit:junit:4.12'
+
+    testImplementation 'junit:junit:4.13.2'
+
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation 'org.slf4j:slf4j-api:1.7.32'
     implementation 'org.slf4j:slf4j-jdk14:1.7.32'
     implementation "org.jetbrains:annotations:13.0"
     implementation 'net.java.dev.jna:jna:4.5.0'

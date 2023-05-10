@@ -1,10 +1,9 @@
 package com.jediterm.terminal.emulator;
 
+import com.jediterm.core.Color;
 import com.jediterm.terminal.TerminalColor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.awt.*;
 
 /**
  * @author traff
@@ -17,7 +16,7 @@ public abstract class ColorPalette {
       assertColorIndexIsLessThan16(colorIndex);
       return getForegroundByColorIndex(colorIndex);
     }
-    return color.toAwtColor();
+    return color.toColor();
   }
 
   protected abstract @NotNull Color getForegroundByColorIndex(int colorIndex);
@@ -28,7 +27,7 @@ public abstract class ColorPalette {
       assertColorIndexIsLessThan16(colorIndex);
       return getBackgroundByColorIndex(colorIndex);
     }
-    return color.toAwtColor();
+    return color.toColor();
   }
 
   protected abstract @NotNull Color getBackgroundByColorIndex(int colorIndex);

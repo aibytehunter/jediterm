@@ -15,13 +15,19 @@ public interface UserSettingsProvider {
 
   float getTerminalFontSize();
 
-  TextStyle getFoundSelectionColor();
-
   /**
    * @return vertical scaling factor
    */
   default float getLineSpacing() {
     return 1.0f;
+  }
+
+  default boolean shouldDisableLineSpacingForAlternateScreenBuffer() {
+    return false;
+  }
+
+  default boolean shouldFillCharacterBackgroundIncludingLineSpacing() {
+    return true;
   }
 
   TextStyle getDefaultStyle();
@@ -65,4 +71,6 @@ public interface UserSettingsProvider {
   boolean ambiguousCharsAreDoubleWidth();
 
   @NotNull TerminalTypeAheadSettings getTypeAheadSettings();
+
+  boolean sendArrowKeysInAlternativeMode();
 }

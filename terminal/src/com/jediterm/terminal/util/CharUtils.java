@@ -1,8 +1,8 @@
 package com.jediterm.terminal.util;
 
+import com.jediterm.core.util.Ascii;
 import com.jediterm.terminal.emulator.charset.CharacterSets;
 import com.jediterm.terminal.model.CharBuffer;
-import com.jediterm.typeahead.Ascii;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -20,7 +20,6 @@ public class CharUtils {
 
   //JediTerm Unicode private use area U+100000–U+10FFFD
   public static final char DWC = '\uE000'; //Second part of double-width character
-  public static final char FILL_CHAR = DWC; //填充点位符
 
   private CharUtils() {
   }

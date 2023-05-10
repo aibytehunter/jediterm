@@ -1,9 +1,9 @@
 package com.jediterm.terminal;
 
+import com.jediterm.core.Color;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.awt.*;
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -58,7 +58,7 @@ public class TerminalColor {
     return myColorIndex != -1;
   }
 
-  public @NotNull Color toAwtColor() {
+  public @NotNull Color toColor() {
     if (isIndexed()) {
       throw new IllegalArgumentException("Color is indexed color so a palette is needed");
     }
@@ -68,22 +68,6 @@ public class TerminalColor {
 
   public int getColorIndex() {
     return myColorIndex;
-  }
-
-  public @NotNull String toHexString16() {
-    Color color = toAwtColor();
-
-    // (n * 0x101) converts the 8-bit number to 16 bits.
-    String red = padStart(Integer.toHexString(color.getRed() * 0x101), 4, '0');
-    String green = padStart(Integer.toHexString(color.getGreen() * 0x101), 4, '0');
-    String blue = padStart(Integer.toHexString(color.getBlue() * 0x101), 4, '0');
-    
-    return red + "/" + green + "/" + blue;
-  }
-
-  @SuppressWarnings("SameParameterValue")
-  private @NotNull String padStart(@NotNull String str, int totalLength, char ch) {
-    return Character.toString(ch).repeat(Math.max(0, totalLength - str.length())) + str;
   }
 
   @Override
@@ -99,7 +83,7 @@ public class TerminalColor {
     return Objects.hash(myColorIndex, myColor);
   }
 
-  public static @Nullable TerminalColor awt(@Nullable Color color) {
+  public static @Nullable TerminalColor fromColor(@Nullable Color color) {
     if (color == null) {
       return null;
     }

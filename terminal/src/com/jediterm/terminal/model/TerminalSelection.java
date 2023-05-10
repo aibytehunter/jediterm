@@ -1,9 +1,8 @@
 package com.jediterm.terminal.model;
 
+import com.jediterm.core.compatibility.Point;
 import com.jediterm.terminal.util.Pair;
 import org.jetbrains.annotations.Nullable;
-
-import java.awt.*;
 
 /**
  * @author traff

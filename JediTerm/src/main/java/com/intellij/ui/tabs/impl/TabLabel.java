@@ -156,7 +156,7 @@ public class TabLabel extends JPanel implements Accessible {
         SimpleColoredComponent label = new SimpleColoredComponent() {
             @Override
             protected boolean shouldDrawMacShadow() {
-                return SystemInfo.isMac || DrawUtil.isUnderDarcula();
+                return SystemInfo.isMac || com.intellij.util.ui.DrawUtil.isUnderDarcula();
             }
 
             @Override

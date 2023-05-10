@@ -122,4 +122,15 @@ public class TextProcessing {
   public void addHyperlinkFilter(@NotNull HyperlinkFilter filter) {
     myHyperlinkFilter.add(filter);
   }
+
+  public @NotNull List<LinkResultItem> applyFilter(@NotNull String line) {
+    List<LinkResultItem> links = new ArrayList<>();
+    for (HyperlinkFilter filter : myHyperlinkFilter) {
+      LinkResult result = filter.apply(line);
+      if (result != null) {
+        links.addAll(result.getItems());
+      }
+    }
+    return links;
+  }
 }
