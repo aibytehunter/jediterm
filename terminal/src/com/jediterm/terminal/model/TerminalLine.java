@@ -3,14 +3,14 @@ package com.jediterm.terminal.model;
 import com.jediterm.terminal.StyledTextConsumer;
 import com.jediterm.terminal.TextStyle;
 import com.jediterm.terminal.util.CharUtils;
-import com.jediterm.terminal.util.Pair;
+import kotlin.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.TestOnly;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -22,7 +22,7 @@ public final class TerminalLine {
 
   private TextEntries myTextEntries = new TextEntries();
   private boolean myWrapped = false;
-  private final List<TerminalLineIntervalHighlighting> myCustomHighlightings = new ArrayList<>();
+  private final List<TerminalLineIntervalHighlighting> myCustomHighlightings = new CopyOnWriteArrayList<>();
   TerminalLine myTypeAheadLine;
 
   public TerminalLine() {
@@ -74,7 +74,7 @@ public final class TerminalLine {
     myWrapped = wrapped;
   }
 
-  public synchronized void clear(@NotNull TextEntry filler) {
+  public void clear(@NotNull TextEntry filler) {
     myTextEntries.clear();
     myTextEntries.add(filler);
     setWrapped(false);
@@ -88,7 +88,7 @@ public final class TerminalLine {
     insertCharacters(x, style, str);
   }
 
-  private synchronized void writeCharacters(int x, @NotNull TextStyle style, @NotNull CharBuffer characters) {
+  private void writeCharacters(int x, @NotNull TextStyle style, @NotNull CharBuffer characters) {
     int len = myTextEntries.length();
 
     if (x >= len) {
@@ -103,7 +103,7 @@ public final class TerminalLine {
     }
   }
 
-  private synchronized void insertCharacters(int x, @NotNull TextStyle style, @NotNull CharBuffer characters) {
+  private void insertCharacters(int x, @NotNull TextStyle style, @NotNull CharBuffer characters) {
     int length = myTextEntries.length();
     if (x > length) {
       writeCharacters(x, style, characters);
@@ -113,36 +113,36 @@ public final class TerminalLine {
     Pair<char[], TextStyle[]> pair = toBuf(myTextEntries, length + characters.length());
 
     for (int i = length - 1; i >= x; i--) {
-      pair.first[i + characters.length()] = pair.first[i];
-      pair.second[i + characters.length()] = pair.second[i];
+      pair.getFirst()[i + characters.length()] = pair.getFirst()[i];
+      pair.getSecond()[i + characters.length()] = pair.getSecond()[i];
     }
     for (int i = 0; i < characters.length(); i++) {
-      pair.first[i + x] = characters.charAt(i);
-      pair.second[i + x] = style;
+      pair.getFirst()[i + x] = characters.charAt(i);
+      pair.getSecond()[i + x] = style;
     }
-    myTextEntries = collectFromBuffer(pair.first, pair.second);
+    myTextEntries = collectFromBuffer(pair.getFirst(), pair.getSecond());
   }
 
   private static TextEntries merge(int x, @NotNull CharBuffer str, @NotNull TextStyle style, @NotNull TextEntries entries, int lineLength) {
     Pair<char[], TextStyle[]> pair = toBuf(entries, lineLength);
 
     for (int i = 0; i < str.length(); i++) {
-      pair.first[i + x] = str.charAt(i);
-      pair.second[i + x] = style;
+      pair.getFirst()[i + x] = str.charAt(i);
+      pair.getSecond()[i + x] = style;
     }
 
-    return collectFromBuffer(pair.first, pair.second);
+    return collectFromBuffer(pair.getFirst(), pair.getSecond());
   }
 
   private static Pair<char[], TextStyle[]> toBuf(TextEntries entries, int lineLength) {
-    Pair<char[], TextStyle[]> pair = Pair.create(new char[lineLength], new TextStyle[lineLength]);
+    Pair<char[], TextStyle[]> pair = new Pair<>(new char[lineLength], new TextStyle[lineLength]);
 
 
     int p = 0;
     for (TextEntry entry : entries) {
       for (int i = 0; i < entry.getLength(); i++) {
-        pair.first[p + i] = entry.getText().charAt(i);
-        pair.second[p + i] = entry.getStyle();
+        pair.getFirst()[p + i] = entry.getText().charAt(i);
+        pair.getSecond()[p + i] = entry.getStyle();
       }
       p += entry.getLength();
     }
@@ -168,17 +168,17 @@ public final class TerminalLine {
     return result;
   }
 
-  public synchronized void deleteCharacters(int x) {
+  public void deleteCharacters(int x) {
     deleteCharacters(x, TextStyle.EMPTY);
   }
 
-  public synchronized void deleteCharacters(int x, @NotNull TextStyle style) {
+  public void deleteCharacters(int x, @NotNull TextStyle style) {
     deleteCharacters(x, myTextEntries.length() - x, style);
     // delete to the end of line : line is no more wrapped
     setWrapped(false);
   }
 
-  public synchronized void deleteCharacters(int x, int count, @NotNull TextStyle style) {
+  public void deleteCharacters(int x, int count, @NotNull TextStyle style) {
     int p = 0;
     TextEntries newEntries = new TextEntries();
 
@@ -217,7 +217,7 @@ public final class TerminalLine {
     myTextEntries = newEntries;
   }
 
-  public synchronized void insertBlankCharacters(int x, int count, int maxLen, @NotNull TextStyle style) {
+  public void insertBlankCharacters(int x, int count, int maxLen, @NotNull TextStyle style) {
     int len = myTextEntries.length();
     len = Math.min(len + count, maxLen);
 
@@ -260,7 +260,7 @@ public final class TerminalLine {
     myTextEntries = collectFromBuffer(buf, styles);
   }
 
-  public synchronized void clearArea(int leftX, int rightX, @NotNull TextStyle style) {
+  public void clearArea(int leftX, int rightX, @NotNull TextStyle style) {
     if (rightX == -1) {
       rightX = Math.max(myTextEntries.length(), leftX);
     }
@@ -269,8 +269,7 @@ public final class TerminalLine {
             rightX - leftX));
   }
 
-  @Nullable
-  public synchronized TextStyle getStyleAt(int x) {
+  public @Nullable TextStyle getStyleAt(int x) {
     int i = 0;
 
     for (TextEntry te : myTextEntries) {
@@ -283,7 +282,7 @@ public final class TerminalLine {
     return null;
   }
 
-  public synchronized void process(int y, StyledTextConsumer consumer, int startRow) {
+  public void process(int y, StyledTextConsumer consumer, int startRow) {
     int x = 0;
     int nulIndex = -1;
     TerminalLineIntervalHighlighting highlighting = myCustomHighlightings.stream().findFirst().orElse(null);
@@ -335,7 +334,7 @@ public final class TerminalLine {
     }
   }
 
-  public synchronized boolean isNul() {
+  public boolean isNul() {
     for (TextEntry e : myTextEntries) {
       if (!e.isNul()) {
         return false;
@@ -345,12 +344,24 @@ public final class TerminalLine {
     return true;
   }
 
-  void forEachEntry(@NotNull Consumer<TextEntry> action) {
+  public boolean isEmpty() {
+    for (TextEntry e : myTextEntries) {
+      if (!e.isNul() && e.getLength() > 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public boolean isNulOrEmpty() {
+    return isNul() || isEmpty();
+  }
+
+  public void forEachEntry(@NotNull Consumer<TextEntry> action) {
     myTextEntries.forEach(action);
   }
 
-  @TestOnly
-  public List<TextEntry> getEntries() {
+  public @NotNull List<TextEntry> getEntries() {
     return Collections.unmodifiableList(myTextEntries.entries());
   }
 
@@ -359,13 +370,11 @@ public final class TerminalLine {
   }
 
   @SuppressWarnings("unused") // used by IntelliJ
-  public synchronized @NotNull TerminalLineIntervalHighlighting addCustomHighlighting(int startOffset, int length, @NotNull TextStyle textStyle) {
+  public @NotNull TerminalLineIntervalHighlighting addCustomHighlighting(int startOffset, int length, @NotNull TextStyle textStyle) {
     TerminalLineIntervalHighlighting highlighting = new TerminalLineIntervalHighlighting(this, startOffset, length, textStyle) {
       @Override
       protected void doDispose() {
-        synchronized (TerminalLine.this) {
-          myCustomHighlightings.remove(this);
-        }
+        myCustomHighlightings.remove(this);
       }
     };
     myCustomHighlightings.add(highlighting);

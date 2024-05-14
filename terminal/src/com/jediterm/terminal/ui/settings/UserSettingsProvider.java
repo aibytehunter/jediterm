@@ -1,12 +1,14 @@
 package com.jediterm.terminal.ui.settings;
 
 import com.jediterm.terminal.HyperlinkStyle;
+import com.jediterm.terminal.TerminalColor;
 import com.jediterm.terminal.TextStyle;
 import com.jediterm.terminal.emulator.ColorPalette;
 import com.jediterm.terminal.model.TerminalTypeAheadSettings;
 import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
+import java.util.Objects;
 
 public interface UserSettingsProvider {
   ColorPalette getTerminalColorPalette();
@@ -14,8 +16,6 @@ public interface UserSettingsProvider {
   Font getTerminalFont();
 
   float getTerminalFontSize();
-
-  TextStyle getFoundSelectionColor();
 
   /**
    * @return vertical scaling factor
@@ -32,15 +32,36 @@ public interface UserSettingsProvider {
     return true;
   }
 
-  TextStyle getDefaultStyle();
+  default @NotNull TerminalColor getDefaultForeground() {
+    return Objects.requireNonNull(getDefaultStyle().getForeground());
+  }
 
-  TextStyle getSelectionColor();
+  default @NotNull TerminalColor getDefaultBackground() {
+    return Objects.requireNonNull(getDefaultStyle().getBackground());
+  }
 
-  TextStyle getFoundPatternColor();
+  /**
+   * @deprecated override {@link UserSettingsProvider#getDefaultForeground()} and
+   * {@link UserSettingsProvider#getDefaultBackground()} instead
+   */
+  @Deprecated
+  default @NotNull TextStyle getDefaultStyle() {
+    return new TextStyle(TerminalColor.BLACK, TerminalColor.WHITE);
+  }
+
+  @NotNull TextStyle getSelectionColor();
+
+  @NotNull TextStyle getFoundPatternColor();
 
   TextStyle getHyperlinkColor();
 
   HyperlinkStyle.HighlightMode getHyperlinkHighlightingMode();
+
+  default boolean enableTextBlinking() { return false; }
+
+  default int slowTextBlinkMs() { return 1000; }
+
+  default int rapidTextBlinkMs() { return 500; }
 
   boolean useInverseSelectionColor();
 

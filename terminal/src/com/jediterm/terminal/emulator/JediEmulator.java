@@ -13,10 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.BiConsumer;
 
 /**
  * The main terminal emulator class.
@@ -31,9 +27,8 @@ public class JediEmulator extends DataStreamIteratingEmulator {
   private static final Logger LOG = LoggerFactory.getLogger(JediEmulator.class);
 
   private static int logThrottlerCounter = 0;
-  private static int logThrottlerRatio = 100;
+  private static final int logThrottlerRatio = 100;
   private static int logThrottlerLimit = logThrottlerRatio;
-  private final BlockingQueue<CompletableFuture<Void>> myResizeFutureQueue = new LinkedBlockingQueue<>();
 
   public JediEmulator(TerminalDataStream dataStream, Terminal terminal) {
     super(dataStream, terminal);
@@ -95,9 +90,6 @@ public class JediEmulator extends DataStreamIteratingEmulator {
           terminal.writeCharacters(nonControlCharacters);
         }
         break;
-    }
-    if (myDataStream.isEmpty()) {
-      completeResize();
     }
   }
 
@@ -164,8 +156,8 @@ public class JediEmulator extends DataStreamIteratingEmulator {
       case 'F': //Cursor to lower left corner of the screen
         terminal.cursorPosition(1, terminal.getTerminalHeight());
         break;
-      case 'c': //Full Reset (RIS)
-        terminal.reset();
+      case 'c': // RIS (Reset to Initial State) https://vt100.net/docs/vt510-rm/RIS.html
+        terminal.reset(true);
         break;
       case 'n': //Invoke the G2 Character Set as GL - locking shift 2 (LS2)
         myTerminal.mapCharsetToGL(2);
@@ -201,9 +193,15 @@ public class JediEmulator extends DataStreamIteratingEmulator {
   }
 
   private void processOsc() throws IOException {
-    SystemCommandSequence command = new SystemCommandSequence(myDataStream);
-    if (!operatingSystemCommand(command)) {
-      LOG.warn("Error processing OSC: ESC]" + command);
+    SystemCommandSequence osc = new SystemCommandSequence(myDataStream);
+    try {
+      boolean processed = doProcessOsc(osc);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Processed OSC (" + osc + "): " + processed);
+      }
+    }
+    catch (Exception e) {
+      LOG.error("Error processing OSC (" + osc + ")", e);
     }
   }
 
@@ -211,14 +209,13 @@ public class JediEmulator extends DataStreamIteratingEmulator {
     return false;
   }
 
-  private boolean operatingSystemCommand(SystemCommandSequence args) {
+  private boolean doProcessOsc(@NotNull SystemCommandSequence args) {
+    // https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Operating-System-Commands
     int ps = args.getIntAt(0, -1);
-
     switch (ps) {
       case 0: // Icon name / Window Title
       case 1: // Icon name
       case 2: // Window Title
-        // https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Operating-System-Commands
         String name = args.getStringAt(1);
         if (name != null) {
           myTerminal.setWindowTitle(name);
@@ -244,6 +241,11 @@ public class JediEmulator extends DataStreamIteratingEmulator {
       case 10:
       case 11:
         return processColorQuery(args);
+      case 104:
+        // `Ps = 104 ; c` (Reset Color Number c).
+        // Let's support resetting to avoid warnings.
+        // As there is no support for `Ps = 4 ; c ; spec` (Change Color Number c to the color specified by spec),
+        // resetting is just no operation.
       case 1341:
         List<String> argList = args.getArgs();
         myTerminal.processCustomCommand(argList.subList(1, argList.size()));
@@ -275,7 +277,7 @@ public class JediEmulator extends DataStreamIteratingEmulator {
       return false;
     }
     if (color != null) {
-      String str = args.format(ps + ";" + color.toXParseColor());
+      String str = args.format(List.of(String.valueOf(ps), color.toXParseColor()));
       if (LOG.isDebugEnabled()) {
         LOG.debug("Responding to OSC " + ps + " query: " + str);
       }
@@ -312,13 +314,11 @@ public class JediEmulator extends DataStreamIteratingEmulator {
         }
         break;
       case '#':
-        switch (secondCh) {
-          case '8':
-            terminal.fillScreen('E');
-            break;
-          default:
-            unsupported(ch, secondCh);
-        }
+          if (secondCh == '8') {
+              terminal.fillScreen('E');
+          } else {
+              unsupported(ch, secondCh);
+          }
         break;
       case '%':
         switch (secondCh) {
@@ -464,6 +464,13 @@ public class JediEmulator extends DataStreamIteratingEmulator {
         return characterAttributes(args); //Character Attributes (SGR)
       case 'n':
         return deviceStatusReport(args); //DSR
+      case 'p':
+        if (args.startsWithExclamationMark()) {
+          // DECSTR (Soft Terminal Reset) https://vt100.net/docs/vt510-rm/DECSTR.html
+          myTerminal.reset(false);
+          return true;
+        }
+        return false;
       case 'q':
         return cursorShape(args); //DECSCUSR
       case 'r':
@@ -626,6 +633,10 @@ public class JediEmulator extends DataStreamIteratingEmulator {
             setMouseMode(MouseMode.MOUSE_REPORTING_NONE);
           }
           return true;
+        case 1004:
+          // stub focus gained/lost events for now
+          // https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+          return true;
         case 1005:
           if (enabled) {
             myTerminal.setMouseFormat(MouseFormat.MOUSE_FORMAT_XTERM_EXT);
@@ -655,6 +666,10 @@ public class JediEmulator extends DataStreamIteratingEmulator {
           return true;
         case 2004:
           setModeEnabled(TerminalMode.BracketedPasteMode, enabled);
+          return true;
+        case 9001:
+          // suppress warnings about `win32-input-mode`
+          // https://github.com/microsoft/terminal/blob/main/doc/specs/%234999%20-%20Improved%20keyboard%20handling%20in%20Conpty.md
           return true;
         default:
           return false;
@@ -689,7 +704,7 @@ public class JediEmulator extends DataStreamIteratingEmulator {
   }
 
   private boolean restoreDecPrivateModeValues(ControlSequence args) {
-    LOG.warn("Unsupported: " + args.toString());
+    LOG.warn("Unsupported: " + args);
 
     return false;
   }
@@ -714,7 +729,7 @@ public class JediEmulator extends DataStreamIteratingEmulator {
       myTerminal.deviceStatusReport(str);
       return true;
     } else {
-      LOG.warn("Sending Device Report Status : unsupported parameter: " + args.toString());
+      LOG.warn("Sending Device Report Status : unsupported parameter: " + args);
       return false;
     }
   }
@@ -742,7 +757,7 @@ public class JediEmulator extends DataStreamIteratingEmulator {
         myTerminal.cursorShape(CursorShape.STEADY_VERTICAL_BAR);
         return true;
       default:
-        LOG.warn("Setting cursor shape : unsupported parameter " + args.toString());
+        LOG.warn("Setting cursor shape : unsupported parameter " + args);
         return false;
     }
   }
@@ -797,16 +812,11 @@ public class JediEmulator extends DataStreamIteratingEmulator {
   }
 
   private boolean eraseInDisplay(ControlSequence args) {
-    // ESC [ Ps J
-    final int arg = args.getArg(0, 0);
-
     if (args.startsWithQuestionMark()) {
-      //TODO: support ESC [ ? Ps J - Selective Erase (DECSED)
+      // Selective Erase (DECSED) is not supported
       return false;
     }
-
-    myTerminal.eraseInDisplay(arg);
-
+    myTerminal.eraseInDisplay(args.getArg(0, 0));
     return true;
   }
 
@@ -937,8 +947,13 @@ public class JediEmulator extends DataStreamIteratingEmulator {
         case 4:// Underlined
           builder.setOption(TextStyle.Option.UNDERLINED, true);
           break;
-        case 5:// Blink (appears as Bold)
-          builder.setOption(TextStyle.Option.BLINK, true);
+        case 5:// Slow Blink
+          builder.setOption(TextStyle.Option.SLOW_BLINK, true);
+          builder.setOption(TextStyle.Option.RAPID_BLINK, false);
+          break;
+        case 6:// Rapid Blink
+          builder.setOption(TextStyle.Option.SLOW_BLINK, false);
+          builder.setOption(TextStyle.Option.RAPID_BLINK, true);
           break;
         case 7:// Inverse
           builder.setOption(TextStyle.Option.INVERSE, true);
@@ -957,7 +972,8 @@ public class JediEmulator extends DataStreamIteratingEmulator {
           builder.setOption(TextStyle.Option.UNDERLINED, false);
           break;
         case 25: //Steady (not blinking)
-          builder.setOption(TextStyle.Option.BLINK, false);
+          builder.setOption(TextStyle.Option.SLOW_BLINK, false);
+          builder.setOption(TextStyle.Option.RAPID_BLINK, false);
           break;
         case 27: //Positive (not inverse)
           builder.setOption(TextStyle.Option.INVERSE, false);
@@ -1048,14 +1064,14 @@ public class JediEmulator extends DataStreamIteratingEmulator {
               (val2 >= 0 && val2 < 256)) {
         return new TerminalColor(val0, val1, val2);
       } else {
-        LOG.warn("Bogus color setting " + args.toString());
+        LOG.warn("Bogus color setting " + args);
         return null;
       }
     } else if (code == 5) {
       /* indexed color */
       return ColorPalette.getIndexedTerminalColor(args.getArg(index + 2, 0));
     } else {
-      LOG.warn("Unsupported code for color attribute " + args.toString());
+      LOG.warn("Unsupported code for color attribute " + args);
       return null;
     }
   }
@@ -1086,19 +1102,5 @@ public class JediEmulator extends DataStreamIteratingEmulator {
 
   public void setMouseMode(MouseMode mouseMode) {
     myTerminal.setMouseMode(mouseMode);
-  }
-
-  public @NotNull CompletableFuture<?> getPromptUpdatedAfterResizeFuture(@NotNull BiConsumer<Long, Runnable> taskScheduler) {
-    CompletableFuture<Void> resizeFuture = new CompletableFuture<>();
-    taskScheduler.accept(100L, this::completeResize);
-    myResizeFutureQueue.add(resizeFuture);
-    return resizeFuture;
-  }
-
-  private void completeResize() {
-    CompletableFuture<Void> resizeFuture;
-    while ((resizeFuture = myResizeFutureQueue.poll()) != null) {
-      resizeFuture.complete(null);
-    }
   }
 }

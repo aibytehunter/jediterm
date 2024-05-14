@@ -6,6 +6,7 @@ import com.jediterm.core.TerminalCoordinates;
 import com.jediterm.core.compatibility.Point;
 import com.jediterm.core.input.MouseEvent;
 import com.jediterm.core.input.MouseWheelEvent;
+import com.jediterm.core.util.CellPosition;
 import com.jediterm.core.util.TermSize;
 import com.jediterm.terminal.*;
 import com.jediterm.terminal.emulator.charset.CharacterSet;
@@ -15,6 +16,7 @@ import com.jediterm.terminal.emulator.mouse.*;
 import com.jediterm.terminal.model.hyperlinks.LinkResultItem;
 import com.jediterm.terminal.model.hyperlinks.TextProcessing;
 import com.jediterm.terminal.util.CharUtils;
+import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -24,7 +26,6 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.text.Normalizer;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -73,14 +74,17 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
   private Point myLastMotionReport = null;
   private boolean myCursorYChanged;
 
-  public JediTerminal(final TerminalDisplay display, final TerminalTextBuffer buf, final StyleState initialStyleState) {
+  private final List<TerminalApplicationTitleListener> myApplicationTitleListeners = new CopyOnWriteArrayList<>();
+  private final List<TerminalResizeListener> myTerminalResizeListeners = new CopyOnWriteArrayList<>();
+
+  public JediTerminal(@NotNull TerminalDisplay display, @NotNull TerminalTextBuffer buf, @NotNull StyleState initialStyleState) {
     myTerminalKeyEncoder = new TerminalKeyEncoder(Platform.current());
     myDisplay = display;
     myTerminalTextBuffer = buf;
     myStyleState = initialStyleState;
 
-    myTerminalWidth = display.getColumnCount();
-    myTerminalHeight = display.getRowCount();
+    myTerminalWidth = buf.getWidth();
+    myTerminalHeight = buf.getHeight();
 
     myScrollRegionTop = 1;
     myScrollRegionBottom = myTerminalHeight;
@@ -89,7 +93,7 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
 
     myGraphicSetState = new GraphicSetState();
 
-    reset();
+    reset(true);
   }
 
 
@@ -258,8 +262,25 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
   }
 
   @Override
-  public void setWindowTitle(String name) {
-    myDisplay.setWindowTitle(name);
+  public void setWindowTitle(@NotNull String name) {
+    changeApplicationTitle(name);
+  }
+
+  @Override
+  public void addApplicationTitleListener(@NotNull TerminalApplicationTitleListener listener) {
+    myApplicationTitleListeners.add(listener);
+  }
+
+  @Override
+  public void removeApplicationTitleListener(@NotNull TerminalApplicationTitleListener listener) {
+    myApplicationTitleListeners.remove(listener);
+  }
+
+  private void changeApplicationTitle(@Nls String newApplicationTitle) {
+    for (TerminalApplicationTitleListener applicationTitleListener : myApplicationTitleListeners) {
+      applicationTitleListener.onApplicationTitleChanged(newApplicationTitle);
+    }
+    myDisplay.setWindowTitle(newApplicationTitle);
   }
 
   @Override
@@ -272,8 +293,18 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
   public void restoreWindowTitleFromStack() {
     if (!myWindowTitlesStack.empty()) {
       String title = myWindowTitlesStack.pop();
-      myDisplay.setWindowTitle(title);
+      changeApplicationTitle(title);
     }
+  }
+
+  @Override
+  public void addResizeListener(@NotNull TerminalResizeListener listener) {
+    myTerminalResizeListeners.add(listener);
+  }
+
+  @Override
+  public void removeResizeListener(@NotNull TerminalResizeListener listener) {
+    myTerminalResizeListeners.remove(listener);
   }
 
   @Override
@@ -286,16 +317,16 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
     return myDisplay.getWindowBackground();
   }
 
-  private final List<TerminalCustomCommandListener> myListeners = new CopyOnWriteArrayList<>();
+  private final List<TerminalCustomCommandListener> myCustomCommandListeners = new CopyOnWriteArrayList<>();
 
   @Override
   public void addCustomCommandListener(@NotNull TerminalCustomCommandListener listener) {
-    myListeners.add(listener);
+    myCustomCommandListeners.add(listener);
   }
 
   @Override
   public void processCustomCommand(@NotNull List<String> args) {
-    for (TerminalCustomCommandListener listener : myListeners) {
+    for (TerminalCustomCommandListener listener : myCustomCommandListeners) {
       listener.process(args);
     }
   }
@@ -338,6 +369,7 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
 
   @Override
   public void eraseInDisplay(final int arg) {
+    // ED (Erase in Display) https://vt100.net/docs/vt510-rm/ED.html
     myTerminalTextBuffer.lock();
     try {
       int beginY;
@@ -365,6 +397,14 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
           beginY = 0;
           endY = myTerminalHeight - 1;
           myTerminalTextBuffer.moveScreenLinesToHistory();
+          break;
+        case 3:
+          // Clear entire screen and delete all lines saved in the scrollback buffer (xterm).
+          // https://en.wikipedia.org/wiki/ANSI_escape_code#CSIsection
+          // `clear` command emits it, and the scroll buffer is expected to be cleared as a result.
+          beginY = 0;
+          endY = myTerminalHeight - 1;
+          myTerminalTextBuffer.clearHistory();
           break;
         default:
           LOG.warn("Unsupported erase in display mode:" + arg);
@@ -403,7 +443,7 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
   @Override
   public void useAlternateBuffer(boolean enabled) {
     myTerminalTextBuffer.useAlternateBuffer(enabled);
-    myDisplay.setScrollingEnabled(!enabled);
+    myDisplay.useAlternateScreenBuffer(enabled);
   }
 
   @Override
@@ -649,7 +689,7 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
   }
 
   @Override
-  public void cursorShape(CursorShape shape) {
+  public void cursorShape(@NotNull CursorShape shape) {
     myDisplay.setCursorShape(shape);
   }
 
@@ -667,25 +707,27 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
 
   @Override
   public void cursorPosition(int x, int y) {
-    if (isOriginMode()) {
-      myCursorY = y + scrollingRegionTop() - 1;
-    } else {
-      myCursorY = y;
-    }
+    myTerminalTextBuffer.modify(() -> {
+      if (isOriginMode()) {
+        myCursorY = y + scrollingRegionTop() - 1;
+      } else {
+        myCursorY = y;
+      }
 
-    if (myCursorY > scrollingRegionBottom()) {
-      myCursorY = scrollingRegionBottom();
-    }
+      if (myCursorY > scrollingRegionBottom()) {
+        myCursorY = scrollingRegionBottom();
+      }
 
-    // avoid issue due to malformed sequence
-    myCursorX = Math.max(0, x - 1);
-    myCursorX = Math.min(myCursorX, myTerminalWidth - 1);
+      // avoid issue due to malformed sequence
+      myCursorX = Math.max(0, x - 1);
+      myCursorX = Math.min(myCursorX, myTerminalWidth - 1);
 
-    myCursorY = Math.max(0, myCursorY);
+      myCursorY = Math.max(0, myCursorY);
 
-    adjustXY(-1);
+      adjustXY(-1);
 
-    myDisplay.setCursor(myCursorX, myCursorY);
+      myDisplay.setCursor(myCursorX, myCursorY);
+    });
   }
 
   @Override
@@ -787,14 +829,20 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
   }
 
   @Override
-  public void reset() {
+  public void reset(boolean clearScrollBackBuffer) {
     myGraphicSetState.resetState();
 
     myStyleState.reset();
 
-    myTerminalTextBuffer.clearAll();
+    resetScrollRegions();
 
-    myDisplay.setScrollingEnabled(true);
+    useAlternateBuffer(false);
+    if (clearScrollBackBuffer) {
+      myTerminalTextBuffer.clearScreenAndHistoryBuffers();
+    }
+    else {
+      myTerminalTextBuffer.clearScreenBuffer();
+    }
 
     initModes();
 
@@ -1030,8 +1078,9 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
   }
 
   @Override
-  public void setMouseFormat(MouseFormat mouseFormat) {
+  public void setMouseFormat(@NotNull MouseFormat mouseFormat) {
     myMouseFormat = mouseFormat;
+    myDisplay.setMouseFormat(mouseFormat);
   }
 
   private void adjustXY(int dirX) {
@@ -1076,48 +1125,36 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
     writeCharacters(s);
   }
 
-  public interface ResizeHandler {
-    void sizeUpdated(int termWidth, int termHeight, int cursorX, int cursorY);
-  }
-
   @Override
   public void resize(@NotNull TermSize newTermSize, @NotNull RequestOrigin origin) {
-    resize(newTermSize, origin, CompletableFuture.completedFuture(null));
+    resizeInternal(ensureTermMinimumSize(newTermSize), origin);
   }
 
-  @Override
-  public void resize(@NotNull TermSize newTermSize, @NotNull RequestOrigin origin, @NotNull CompletableFuture<?> promptUpdated) {
-    resizeInternal(ensureTermMinimumSize(newTermSize), origin, promptUpdated);
-  }
-
-  private void resizeInternal(@NotNull TermSize newTermSize, @NotNull RequestOrigin origin, @NotNull CompletableFuture<?> promptUpdated) {
+  private void resizeInternal(@NotNull TermSize newTermSize, @NotNull RequestOrigin origin) {
     int oldHeight = myTerminalHeight;
     if (newTermSize.getColumns() == myTerminalWidth && newTermSize.getRows() == myTerminalHeight) {
       return;
     }
-    if (newTermSize.getColumns() == myTerminalWidth) {
-      doResize(newTermSize, origin, oldHeight);
-    }
-    else {
-      myTerminalWidth = newTermSize.getColumns();
-      myTerminalHeight = newTermSize.getRows();
-      promptUpdated.thenRun(() -> {
-        doResize(newTermSize, origin, oldHeight);
-      });
-    }
+    doResize(newTermSize, origin, oldHeight);
   }
 
   private void doResize(@NotNull TermSize newTermSize, @NotNull RequestOrigin origin, int oldHeight) {
-    myDisplay.requestResize(newTermSize, origin, myCursorX, myCursorY, (termWidth, termHeight, cursorX, cursorY) -> {
-      myTerminalWidth = termWidth;
-      myTerminalHeight = termHeight;
-      myCursorY = cursorY;
-      myCursorX = Math.min(cursorX, myTerminalWidth - 1);
-      myDisplay.setCursor(myCursorX, myCursorY);
-
+    TermSize oldTermSize = new TermSize(myTerminalWidth, myTerminalHeight);
+    myTerminalTextBuffer.modify(() -> {
+      TerminalResizeResult result = myTerminalTextBuffer.resize(newTermSize, getCursorPosition(), myDisplay.getSelection());
+      myTerminalWidth = newTermSize.getColumns();
+      myTerminalHeight = newTermSize.getRows();
+      myCursorX = result.getNewCursor().getX() - 1;
+      myCursorY = result.getNewCursor().getY();
       myTabulator.resize(myTerminalWidth);
+      myScrollRegionBottom += myTerminalHeight - oldHeight;
+
+      myDisplay.setCursor(myCursorX, myCursorY);
+      myDisplay.onResize(newTermSize, origin);
+      for (TerminalResizeListener resizeListener : myTerminalResizeListeners) {
+        resizeListener.onResize(oldTermSize, newTermSize);
+      }
     });
-    myScrollRegionBottom += myTerminalHeight - oldHeight;
   }
 
   public static @NotNull TermSize ensureTermMinimumSize(@NotNull TermSize termSize) {
@@ -1166,6 +1203,10 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
     return new CharBuffer(buf, 0, buf.length);
   }
 
+  public @NotNull TerminalTextBuffer getTerminalTextBuffer() {
+    return myTerminalTextBuffer;
+  }
+
   @Override
   public int getTerminalWidth() {
     return myTerminalWidth;
@@ -1174,6 +1215,11 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
   @Override
   public int getTerminalHeight() {
     return myTerminalHeight;
+  }
+
+  @Override
+  public @NotNull TermSize getSize() {
+    return new TermSize(myTerminalWidth, myTerminalHeight);
   }
 
   @Override
@@ -1187,73 +1233,14 @@ public class JediTerminal implements Terminal, TerminalMouseListener, TerminalCo
   }
 
   @Override
+  public @NotNull CellPosition getCursorPosition() {
+    return new CellPosition(getCursorX(), getCursorY());
+  }
+
+  @Override
   public StyleState getStyleState() {
     return myStyleState;
   }
-
-    public SubstringFinder.FindResult searchInTerminalTextBuffer(final String pattern, boolean ignoreCase) {
-        String newPattern = pattern;
-        if (newPattern.length() == 0) {
-            return null;
-        }
-        newPattern = stringToDoubleWidthCharacter(pattern);
-        final SubstringFinder finder = new SubstringFinder(newPattern, ignoreCase);
-
-    myTerminalTextBuffer.processHistoryAndScreenLines(-myTerminalTextBuffer.getHistoryLinesCount(), -1, new StyledTextConsumer() {
-      @Override
-      public void consume(int x, int y, @NotNull TextStyle style, @NotNull CharBuffer characters, int startRow) {
-        int offset = 0;
-        int length = characters.length();
-        if (characters instanceof SubCharBuffer) {
-          SubCharBuffer subCharBuffer = (SubCharBuffer) characters;
-          characters = subCharBuffer.getParent();
-          offset = subCharBuffer.getOffset();
-        }
-        for (int i = offset; i < offset + length; i++) {
-          finder.nextChar(x, y - startRow, characters, i);
-        }
-      }
-
-      @Override
-      public void consumeNul(int x, int y, int nulIndex, @NotNull TextStyle style, @NotNull CharBuffer characters, int startRow) {
-      }
-
-      @Override
-      public void consumeQueue(int x, int y, int nulIndex, int startRow) {
-      }
-    });
-
-    return finder.getResult();
-  }
-
-    private String stringToDoubleWidthCharacter(String str) {
-        char[] chars = str.toCharArray();
-        int dwcCount = CharUtils.countDoubleWidthCharacters(chars, 0, chars.length, myDisplay.ambiguousCharsAreDoubleWidth());
-
-        char[] buf;
-
-        if (dwcCount > 0) {
-            // Leave gaps for the private use "DWC" character, which simply tells the rendering code to advance one cell.
-            buf = new char[chars.length + dwcCount];
-
-            int j = 0;
-            for (int i = 0; i < chars.length; i++) {
-                buf[j] = chars[i];
-                int codePoint = Character.codePointAt(chars, i);
-                boolean doubleWidthCharacter = CharUtils.isDoubleWidthCharacter(codePoint, myDisplay.ambiguousCharsAreDoubleWidth());
-                if (doubleWidthCharacter) {
-                    j++;
-                    //TODO 此处控制输出字符
-                    buf[j] = CharUtils.FILL_CHAR;
-                }
-                j++;
-            }
-        } else {
-            buf = chars;
-        }
-        return new String(buf, 0, buf.length);
-    }
-
 
   private static class DefaultTabulator implements Tabulator {
     private static final int TAB_LENGTH = 8;

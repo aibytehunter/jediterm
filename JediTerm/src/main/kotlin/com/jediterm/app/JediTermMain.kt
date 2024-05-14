@@ -1,52 +1,40 @@
 package com.jediterm.app
 
-import com.formdev.flatlaf.FlatDarculaLaf
-import com.formdev.flatlaf.FlatLightLaf
-import com.intellij.execution.filters.UrlFilter
-import com.intellij.openapi.Disposable
-import com.intellij.openapi.util.Pair
-import com.jediterm.core.Platform
 import com.jediterm.pty.PtyProcessTtyConnector
 import com.jediterm.terminal.LoggingTtyConnector
 import com.jediterm.terminal.LoggingTtyConnector.TerminalState
 import com.jediterm.terminal.TtyConnector
 import com.jediterm.terminal.ui.JediTermWidget
-import com.jediterm.terminal.ui.TerminalWidget
-import com.jediterm.terminal.ui.UIUtil
-import com.jediterm.terminal.ui.settings.DefaultTabbedSettingsProvider
-import com.jediterm.terminal.ui.settings.TabbedSettingsProvider
+import com.jediterm.terminal.ui.settings.SettingsProvider
 import com.jediterm.ui.AbstractTerminalFrame
+import com.jediterm.ui.debug.TerminalDebugUtil
 import com.pty4j.PtyProcess
 import com.pty4j.PtyProcessBuilder
 import java.io.IOException
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
+import java.nio.file.Path
 import java.util.*
-import java.util.function.Function
 import java.util.logging.ConsoleHandler
 import java.util.logging.Level
 import java.util.logging.LogManager
 import java.util.logging.Logger
 import javax.swing.SwingUtilities
+import kotlin.io.path.pathString
 
 object JediTermMain {
     @JvmStatic
     fun main(arg: Array<String>) {
-
         configureJavaUtilLogging()
 
         SwingUtilities.invokeLater {
-            System.setProperty("awt.useSystemAAFontSettings", "on")
-            System.setProperty("swing.aatext", "true")
-            FlatLightLaf.setup(FlatDarculaLaf());
             JediTerm()
         }
     }
 
     private fun configureJavaUtilLogging() {
         val format = "[%1\$tF %1\$tT] [%4\\\$-7s] %5\$s %n"
-        LogManager.getLogManager()
-            .readConfiguration("java.util.logging.SimpleFormatter.format=$format".byteInputStream())
+        LogManager.getLogManager().readConfiguration("java.util.logging.SimpleFormatter.format=$format".byteInputStream())
 
         val rootLogger = Logger.getLogger("")
         rootLogger.addHandler(ConsoleHandler().also {
@@ -56,55 +44,51 @@ object JediTermMain {
     }
 }
 
-class JediTerm : AbstractTerminalFrame(), Disposable {
-    override fun dispose() {
-        // TODO
-    }
-
-    override fun createTabbedTerminalWidget(): JediTabbedTerminalWidget {
-        return object : JediTabbedTerminalWidget(
-            DefaultTabbedSettingsProvider(),
-            Function<Pair<TerminalWidget, String>, JediTerminalWidget> { pair -> openSession(pair?.first) as JediTerminalWidget },
-            this
-        ) {
-            override fun createInnerTerminalWidget(): JediTerminalWidget {
-                return createTerminalWidget(settingsProvider)
-            }
-        }
-    }
-
+class JediTerm : AbstractTerminalFrame() {
     override fun createTtyConnector(): TtyConnector {
         try {
-            val charset = StandardCharsets.UTF_8
-            val envs = HashMap(System.getenv())
-            if (Platform.current() == Platform.Mac) {
-                envs["LC_CTYPE"] = Charsets.UTF_8.name()
-            }
-            val command: Array<String> = if (UIUtil.isWindows) {
+            val envs: Map<String, String> = configureEnvironmentVariables()
+            val command: Array<String> = if (isWindows()) {
                 arrayOf("powershell.exe")
-            } else {
-                envs["TERM"] = "xterm-256color"
-                val shell = envs["SHELL"] ?: "/bin/bash"
-                if (UIUtil.isMac) arrayOf(shell, "--login") else arrayOf(shell)
             }
+            else {
+                val shell = envs["SHELL"] ?: "/bin/bash"
+                if (isMacOS()) arrayOf(shell, "--login") else arrayOf(shell)
+            }
+            val workingDirectory = Path.of(".").toAbsolutePath().normalize().pathString
 
-            LOG.info("Starting ${command.joinToString()}")
+            LOG.info("Starting ${command.joinToString()} in $workingDirectory")
             val process = PtyProcessBuilder()
+                .setDirectory(workingDirectory)
+                .setInitialColumns(120)
+                .setInitialRows(20)
                 .setCommand(command)
                 .setEnvironment(envs)
                 .setConsole(false)
                 .setUseWinConPty(true)
                 .start()
 
-            return LoggingPtyProcessTtyConnector(process, charset, command.toList())
-        } catch (e: Exception) {
+            return LoggingPtyProcessTtyConnector(process, StandardCharsets.UTF_8, command.toList())
+        }
+        catch (e: Exception) {
             throw IllegalStateException(e)
         }
 
     }
 
-    override fun createTerminalWidget(settingsProvider: TabbedSettingsProvider): JediTerminalWidget {
-        val widget = JediTerminalWidget(settingsProvider, this)
+    private fun configureEnvironmentVariables(): Map<String, String> {
+        val envs = HashMap(System.getenv())
+        if (isMacOS()) {
+            envs["LC_CTYPE"] = Charsets.UTF_8.name()
+        }
+        if (!isWindows()) {
+            envs["TERM"] = "xterm-256color"
+        }
+        return envs
+    }
+
+    override fun createTerminalWidget(settingsProvider: SettingsProvider): JediTermWidget {
+        val widget = JediTermWidget(settingsProvider)
         widget.addHyperlinkFilter(UrlFilter())
         return widget
     }
@@ -132,7 +116,7 @@ class JediTerm : AbstractTerminalFrame(), Disposable {
                 val terminalTextBuffer = myWidget!!.terminalTextBuffer
                 val terminalState = TerminalState(
                     terminalTextBuffer.screenLines,
-                    terminalTextBuffer.styleLines,
+                    TerminalDebugUtil.getStyleLines(terminalTextBuffer),
                     terminalTextBuffer.historyBuffer.lines
                 )
                 myStates.add(terminalState)

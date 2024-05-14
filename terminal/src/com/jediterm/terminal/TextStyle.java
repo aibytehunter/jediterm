@@ -3,17 +3,13 @@ package com.jediterm.terminal;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.ref.WeakReference;
 import java.util.EnumSet;
 import java.util.Objects;
-import java.util.WeakHashMap;
 
 public class TextStyle {
   private static final EnumSet<Option> NO_OPTIONS = EnumSet.noneOf(Option.class);
 
   public static final TextStyle EMPTY = new TextStyle();
-
-  private static final WeakHashMap<TextStyle, WeakReference<TextStyle>> styles = new WeakHashMap<>();
 
   private final TerminalColor myForeground;
   private final TerminalColor myBackground;
@@ -33,22 +29,6 @@ public class TextStyle {
     myOptions = options.clone();
   }
 
-  @NotNull
-  public static TextStyle getCanonicalStyle(TextStyle currentStyle) {
-    if (currentStyle instanceof HyperlinkStyle) {
-      return currentStyle;
-    }
-    final WeakReference<TextStyle> canonRef = styles.get(currentStyle);
-    if (canonRef != null) {
-      final TextStyle canonStyle = canonRef.get();
-      if (canonStyle != null) {
-        return canonStyle;
-      }
-    }
-    styles.put(currentStyle, new WeakReference<>(currentStyle));
-    return currentStyle;
-  }
-
   @Nullable
   public TerminalColor getForeground() {
     return myForeground;
@@ -61,10 +41,6 @@ public class TextStyle {
 
   public TextStyle createEmptyWithColors() {
     return new TextStyle(myForeground, myBackground);
-  }
-
-  public int getId() {
-    return hashCode();
   }
 
   public boolean hasOption(final Option option) {
@@ -86,14 +62,6 @@ public class TextStyle {
     return Objects.hash(myForeground, myBackground, myOptions);
   }
 
-  public TerminalColor getBackgroundForRun() {
-    return myOptions.contains(Option.INVERSE) ? myForeground : myBackground;
-  }
-
-  public TerminalColor getForegroundForRun() {
-    return myOptions.contains(Option.INVERSE) ? myBackground : myForeground;
-  }
-
   @NotNull
   public Builder toBuilder() {
     return new Builder(this);
@@ -102,7 +70,8 @@ public class TextStyle {
   public enum Option {
     BOLD,
     ITALIC,
-    BLINK,
+    SLOW_BLINK,
+    RAPID_BLINK,
     DIM,
     INVERSE,
     UNDERLINED,
@@ -121,7 +90,7 @@ public class TextStyle {
   public static class Builder {
     private TerminalColor myForeground;
     private TerminalColor myBackground;
-    private EnumSet<Option> myOptions;
+    private final EnumSet<Option> myOptions;
 
     public Builder(@NotNull TextStyle textStyle) {
       myForeground = textStyle.myForeground;
