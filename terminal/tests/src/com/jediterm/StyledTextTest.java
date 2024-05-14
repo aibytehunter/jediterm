@@ -2,13 +2,12 @@ package com.jediterm;
 
 import com.jediterm.terminal.ArrayTerminalDataStream;
 import com.jediterm.terminal.TerminalColor;
-import com.jediterm.terminal.TerminalOutputStream;
 import com.jediterm.terminal.TextStyle;
-import com.jediterm.terminal.model.TerminalTextBuffer;
-import com.jediterm.terminal.model.JediTerminal;
-import com.jediterm.terminal.model.StyleState;
 import com.jediterm.terminal.emulator.Emulator;
 import com.jediterm.terminal.emulator.JediEmulator;
+import com.jediterm.terminal.model.JediTerminal;
+import com.jediterm.terminal.model.StyleState;
+import com.jediterm.terminal.model.TerminalTextBuffer;
 import com.jediterm.util.BackBufferDisplay;
 import junit.framework.TestCase;
 import org.jetbrains.annotations.NotNull;

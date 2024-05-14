@@ -346,7 +346,7 @@ public class JediTermWidget extends JPanel implements TerminalSession, TerminalW
   }
 
   private void findText(String text, boolean ignoreCase) {
-    FindResult results = TerminalSearchUtil.searchInTerminalTextBuffer(getTerminalTextBuffer(), text, ignoreCase);
+    FindResult results = TerminalSearchUtil.searchInTerminalTextBuffer(myTerminalPanel,getTerminalTextBuffer(), text, ignoreCase);
     myTerminalPanel.setFindResult(results);
     myFindComponent.onResultUpdated(results);
     myScrollBar.repaint();

@@ -1,9 +1,9 @@
 package com.jediterm.util;
 
 import com.jediterm.terminal.TerminalOutputStream;
-import com.jediterm.terminal.model.TerminalTextBuffer;
 import com.jediterm.terminal.model.JediTerminal;
 import com.jediterm.terminal.model.StyleState;
+import com.jediterm.terminal.model.TerminalTextBuffer;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.ByteArrayOutputStream;
@@ -56,7 +56,7 @@ public class BackBufferTerminal extends JediTerminal {
     }
 
     @Override
-    public void sendBytes(byte[] response) {
+    public void sendBytes(byte @NotNull [] response, boolean userInput) {
       try {
         myOutputStream.write(response);
       } catch (IOException e) {
@@ -65,7 +65,7 @@ public class BackBufferTerminal extends JediTerminal {
     }
 
     @Override
-    public void sendString(String string) {
+    public void sendString(@NotNull String string, boolean userInput) {
       try {
         myOutputStream.write(string.getBytes(StandardCharsets.UTF_8));
       } catch (IOException e) {

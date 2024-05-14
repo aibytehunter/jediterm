@@ -1,7 +1,6 @@
 package com.jediterm.ui.debug
 
 import com.jediterm.terminal.util.CharUtils
-import java.lang.IllegalStateException
 import java.util.regex.Pattern
 
 internal object ControlSequenceVisualizer {

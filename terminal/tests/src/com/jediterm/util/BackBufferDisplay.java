@@ -1,17 +1,14 @@
 package com.jediterm.util;
 
+import com.jediterm.core.Color;
 import com.jediterm.terminal.CursorShape;
-import com.jediterm.terminal.RequestOrigin;
-import com.jediterm.terminal.TerminalColor;
 import com.jediterm.terminal.TerminalDisplay;
-import com.jediterm.terminal.model.TerminalTextBuffer;
-import com.jediterm.terminal.model.JediTerminal;
-import com.jediterm.terminal.model.TerminalSelection;
+import com.jediterm.terminal.emulator.mouse.MouseFormat;
 import com.jediterm.terminal.emulator.mouse.MouseMode;
+import com.jediterm.terminal.model.TerminalSelection;
+import com.jediterm.terminal.model.TerminalTextBuffer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.awt.*;
 
 /**
  * @author traff
@@ -20,21 +17,11 @@ public class BackBufferDisplay implements TerminalDisplay {
   private final TerminalTextBuffer myTerminalTextBuffer;
   private TerminalSelection mySelection = null;
   private String myWindowTitle;
-  private @Nullable TerminalColor myForegroundColor;
-  private @Nullable TerminalColor myBackgroundColor;
+  private @Nullable Color myForegroundColor;
+  private @Nullable Color myBackgroundColor;
 
   public BackBufferDisplay(TerminalTextBuffer terminalTextBuffer) {
     myTerminalTextBuffer = terminalTextBuffer;
-  }
-
-  @Override
-  public int getRowCount() {
-    return myTerminalTextBuffer.getHeight();
-  }
-
-  @Override
-  public int getColumnCount() {
-    return myTerminalTextBuffer.getWidth();
   }
 
   @Override
@@ -42,7 +29,7 @@ public class BackBufferDisplay implements TerminalDisplay {
   }
 
   @Override
-  public void setCursorShape(CursorShape shape) {
+  public void setCursorShape(@NotNull CursorShape cursorShape) {
   }
 
   @Override
@@ -50,36 +37,32 @@ public class BackBufferDisplay implements TerminalDisplay {
   }
 
   @Override
-  public void requestResize(@NotNull Dimension newWinSize, RequestOrigin origin, int cursorX, int cursorY, JediTerminal.ResizeHandler resizeHandler) {
-    myTerminalTextBuffer.resize(newWinSize, origin, cursorX, cursorY, resizeHandler, mySelection);
-  }
-
-  @Override
   public void scrollArea(int scrollRegionTop, int scrollRegionSize, int dy) {
   }
 
   @Override
-  public void setCursorVisible(boolean shouldDrawCursor) {
+  public void setCursorVisible(boolean isCursorVisible) {
   }
 
   @Override
-  public void setScrollingEnabled(boolean enabled) {
+  public void useAlternateScreenBuffer(boolean useAlternateScreenBuffer) {
   }
 
   @Override
-  public void setBlinkingCursor(boolean enabled) {
+  public void setBlinkingCursor(boolean isCursorBlinking) {
   }
 
   @Override
-  public void setWindowTitle(String title) {
-    myWindowTitle = title;
+  public void setWindowTitle(@NotNull String windowTitle) {
+    myWindowTitle = windowTitle;
   }
 
   public @Nullable String getWindowTitle() {
     return myWindowTitle;
   }
 
-  public TerminalSelection getSelection() {
+  @Override
+  public @Nullable TerminalSelection getSelection() {
     return mySelection;
   }
 
@@ -93,24 +76,28 @@ public class BackBufferDisplay implements TerminalDisplay {
   }
 
   @Override
-  public void terminalMouseModeSet(MouseMode mode) {
+  public void terminalMouseModeSet(@NotNull MouseMode mouseMode) {
   }
 
   @Override
-  public @Nullable TerminalColor getWindowForeground() {
+  public void setMouseFormat(@NotNull MouseFormat mouseFormat) {
+  }
+
+  @Override
+  public @Nullable Color getWindowForeground() {
     return myForegroundColor;
   }
 
-  public void setWindowForeground(@Nullable TerminalColor foregroundColor) {
+  public void setWindowForeground(@Nullable Color foregroundColor) {
     myForegroundColor = foregroundColor;
   }
 
   @Override
-  public @Nullable TerminalColor getWindowBackground() {
+  public @Nullable Color getWindowBackground() {
     return myBackgroundColor;
   }
 
-  public void setWindowBackground(@Nullable TerminalColor backgroundColor) {
+  public void setWindowBackground(@Nullable Color backgroundColor) {
     myBackgroundColor = backgroundColor;
   }
 }

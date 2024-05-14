@@ -3,7 +3,6 @@ package com.jediterm.util;
 import com.jediterm.terminal.StyledTextConsumerAdapter;
 import com.jediterm.terminal.TextStyle;
 import com.jediterm.terminal.model.CharBuffer;
-
 import org.jetbrains.annotations.NotNull;
 
 /**
